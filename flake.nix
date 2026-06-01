@@ -22,10 +22,6 @@
             ps.uvicorn
           ];
           backendPython = pkgs.python312.withPackages backendPackages;
-          backendFacePython = pkgs.python312.withPackages (ps:
-            backendPackages ps ++ [
-              ps.deepface
-            ]);
           shellHook = ''
             export PYTHONPATH="$PWD/backend:$PYTHONPATH"
           '';
@@ -37,17 +33,7 @@
               pkgs.watchman
               pkgs.git
               backendPython
-            ];
-
-            inherit shellHook;
-          };
-
-          face = pkgs.mkShell {
-            packages = [
-              pkgs.nodejs_24
-              pkgs.watchman
-              pkgs.git
-              backendFacePython
+              pkgs.uv
             ];
 
             inherit shellHook;
