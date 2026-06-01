@@ -19,6 +19,7 @@
               pkgs.nodejs_24
               pkgs.watchman
               pkgs.git
+              pkgs.nginx
             ];
           };
         });
