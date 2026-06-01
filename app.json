@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "Santinho Hunter",
+    "slug": "santinhohunter",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "santinhohunter",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": ["**/*"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Santinho Hunter precisa da camera para flagrar lixo eleitoral."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Santinho Hunter usa localizacao para registrar onde o santinho foi encontrado."
+        }
+      ]
+    ],
+    "android": {
+      "package": "br.com.santinhohunter.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
