@@ -34,3 +34,15 @@ Variáveis úteis:
 - `SANTINHO_FACE_MODEL=ArcFace`
 - `SANTINHO_FACE_DETECTOR=retinaface`
 - `SANTINHO_EMBEDDINGS_PATH=backend/data/candidate_embeddings.sample.json`
+
+## Fotos Do TSE
+
+Os zips de fotos do TSE sao grandes e nao devem ser extraidos dentro do repo.
+Gere um manifesto local ignorado pelo git:
+
+```sh
+nix develop --command python scripts/import-tse-photo-zip.py ~/Downloads/foto_cand2024_SP_div.zip --output backend/data/tse/2024/SP/photo_manifest.jsonl
+```
+
+Quando o CSV de candidaturas (`consulta_cand`) estiver disponivel, passe `--candidate-csv`
+para enriquecer cada foto pelo `SQ_CANDIDATO`.
