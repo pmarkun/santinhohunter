@@ -609,6 +609,9 @@ Desvantagens:
 Decisao recomendada para MVP:
 
 - Fazer identificacao automatica via backend.
+- Usar backend Python/FastAPI com DeepFace para deteccao, alinhamento e embeddings.
+- Deploy deve funcionar em CPU; se TensorFlow enxergar GPU, o backend pode usar automaticamente.
+- Nao rodar reconhecimento facial pesado no frontend Expo/PWA.
 - Manter captura offline.
 - Quando offline, salvar registro e processar depois.
 - Planejar evolucao para OCR local de numero antes de reconhecimento facial local completo.
@@ -1140,6 +1143,7 @@ Uma versao inicial pode ser considerada pronta quando:
 - A localizacao exibida publicamente pode aproximar bem o ponto, mas nao deve revelar a coordenada bruta exata.
 - Fotos brutas podem ser armazenadas no backend ate o fim da eleicao.
 - O app tera uma politica de uso ativista, legivel e direta, disponivel para leitura sem exigir aceite bloqueante.
+- O match facial sera feito no backend com DeepFace, CPU por padrao e GPU opcional quando disponivel.
 
 ## 34. Principios De Produto
 

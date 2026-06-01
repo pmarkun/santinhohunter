@@ -13,6 +13,8 @@ Santinho Hunter e um app mobile first/PWA para registrar santinhos eleitorais jo
 - Animacoes com `react-native-reanimated`.
 - Persistencia local com AsyncStorage.
 - Testes com Jest.
+- Backend Python/FastAPI para sync e match facial.
+- Match facial com DeepFace no backend; CPU deve funcionar no deploy, usando GPU automaticamente quando TensorFlow enxergar uma.
 - Android via EAS Build.
 - Ambiente via Nix.
 
@@ -22,12 +24,14 @@ Santinho Hunter e um app mobile first/PWA para registrar santinhos eleitorais jo
 - Nao refatore fora do escopo da tarefa.
 - Modele dados com tipos TypeScript explicitos.
 - Isole acesso a camera, localizacao, storage, candidatos, ranking e sync em servicos/hooks reutilizaveis.
+- Nao rode reconhecimento facial pesado no frontend; o app captura/envia e o backend retorna candidatos provaveis.
 - Trate permissoes negadas, offline, erro de sync e dados vazios como estados normais do produto.
 - Preserve acessibilidade: contraste, alvo de toque, labels e feedback textual.
 
 ## Testes
 
 - Adicione ou atualize testes Jest para regras novas e bugs corrigidos.
+- Use pytest para backend Python.
 - Priorize testes de normalizacao de UF, busca por numero, ordenacao de ranking, fila de sync, persistencia e estados de captura.
 - Mocke AsyncStorage, camera, localizacao e rede.
 - Antes de finalizar uma tarefa, rode os testes relevantes. Se nao rodar, explique o motivo.

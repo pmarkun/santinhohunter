@@ -1,0 +1,21 @@
+[project]
+name = "santinhohunter-backend"
+version = "0.1.0"
+description = "Backend API for Santinho Hunter capture sync and face matching."
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi",
+  "numpy",
+  "pillow",
+  "python-multipart",
+  "uvicorn",
+]
+
+[project.optional-dependencies]
+deepface = [
+  "deepface>=0.0.93",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["backend"]
+testpaths = ["backend/tests"]

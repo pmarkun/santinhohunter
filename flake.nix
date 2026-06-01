@@ -12,6 +12,23 @@
       devShells = forAllSystems (system:
         let
           pkgs = import nixpkgs { inherit system; };
+          backendPackages = ps: [
+            ps.fastapi
+            ps.httpx
+            ps.numpy
+            ps.pillow
+            ps.pytest
+            ps.python-multipart
+            ps.uvicorn
+          ];
+          backendPython = pkgs.python312.withPackages backendPackages;
+          backendFacePython = pkgs.python312.withPackages (ps:
+            backendPackages ps ++ [
+              ps.deepface
+            ]);
+          shellHook = ''
+            export PYTHONPATH="$PWD/backend:$PYTHONPATH"
+          '';
         in
         {
           default = pkgs.mkShell {
@@ -19,8 +36,21 @@
               pkgs.nodejs_24
               pkgs.watchman
               pkgs.git
-              pkgs.nginx
+              backendPython
             ];
+
+            inherit shellHook;
+          };
+
+          face = pkgs.mkShell {
+            packages = [
+              pkgs.nodejs_24
+              pkgs.watchman
+              pkgs.git
+              backendFacePython
+            ];
+
+            inherit shellHook;
           };
         });
     };
