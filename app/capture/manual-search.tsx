@@ -37,8 +37,8 @@ export default function ManualSearchScreen() {
   return (
     <AppScreen>
       <View>
-        <Text style={styles.kicker}>Nao bateu?</Text>
-        <Text style={styles.title}>Busca pelo numero</Text>
+        <Text style={styles.kicker}>Não bateu?</Text>
+        <Text style={styles.title}>Busca pelo número</Text>
       </View>
 
       <TextInput
@@ -77,7 +77,7 @@ export default function ManualSearchScreen() {
       <View style={styles.results}>
         {results.length === 0 ? (
           <EmptyState
-            body="Digite o numero que aparece no santinho. A base atual e fixture da eleicao anterior."
+            body="Digite o número que aparece no santinho. A base atual é fixture da eleição anterior."
             title="Sem candidato ainda"
           />
         ) : (
@@ -106,22 +106,22 @@ export default function ManualSearchScreen() {
 
 const styles = StyleSheet.create({
   kicker: {
-    color: colors.alert,
+    color: colors.red,
     fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   title: {
-    color: colors.paper,
+    color: colors.asphalt,
     fontSize: 32,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   input: {
-    backgroundColor: colors.paper,
-    borderColor: colors.alert,
-    borderRadius: radii.sm,
-    borderWidth: 3,
+    backgroundColor: colors.card,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
     color: colors.asphalt,
     fontSize: 28,
     fontWeight: '900',
@@ -133,19 +133,19 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   tab: {
-    backgroundColor: colors.steel,
+    backgroundColor: colors.card,
     borderColor: colors.line,
     borderRadius: radii.sm,
-    borderWidth: 2,
+    borderWidth: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
   activeTab: {
     backgroundColor: colors.alert,
-    borderColor: colors.paper,
+    borderColor: colors.alert,
   },
   tabText: {
-    color: colors.paper,
+    color: colors.asphalt,
     fontSize: 12,
     fontWeight: '900',
     textTransform: 'uppercase',

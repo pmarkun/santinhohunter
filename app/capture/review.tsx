@@ -46,7 +46,7 @@ export default function CaptureReviewScreen() {
         <Text style={styles.metaTitle}>Carimbo do flagra</Text>
         <Text style={styles.meta}>Hora: {new Date().toLocaleString()}</Text>
         <Text style={styles.meta}>
-          Local: {params.latitude && params.longitude ? 'capturado' : 'sem precisao'}
+          Local: {params.latitude && params.longitude ? 'capturado' : 'sem precisão'}
         </Text>
       </View>
 
@@ -58,37 +58,41 @@ export default function CaptureReviewScreen() {
 
 const styles = StyleSheet.create({
   kicker: {
-    color: colors.alert,
+    color: colors.red,
     fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   title: {
-    color: colors.paper,
+    color: colors.asphalt,
     fontSize: 30,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   preview: {
     aspectRatio: 3 / 4,
-    backgroundColor: colors.steel,
-    borderColor: colors.alert,
-    borderWidth: 3,
+    backgroundColor: colors.card,
+    borderColor: colors.line,
+    borderRadius: 8,
+    borderWidth: 1,
     width: '100%',
   },
   metaBox: {
-    backgroundColor: colors.steel,
+    backgroundColor: colors.card,
+    borderColor: colors.line,
+    borderRadius: 8,
+    borderWidth: 1,
     gap: spacing.xs,
     padding: spacing.lg,
   },
   metaTitle: {
-    color: colors.alert,
+    color: colors.asphalt,
     fontSize: 16,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   meta: {
-    color: colors.paper,
+    color: colors.steel,
     fontSize: 14,
     fontWeight: '700',
   },

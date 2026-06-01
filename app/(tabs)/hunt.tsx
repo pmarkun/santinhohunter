@@ -42,7 +42,9 @@ export default function HuntScreen() {
   return (
     <AppScreen>
       <View style={styles.hero}>
-        <Text style={styles.kicker}>Eleição Geral 2026 / SP</Text>
+        <View style={styles.kickerWrap}>
+          <Text style={styles.kicker}>Eleição Geral 2026 / SP</Text>
+        </View>
         <Text style={styles.title}>Caçadores de Santinhos</Text>
         <Text style={styles.body}>
           Toda eleição é a mesma coisa. Milhares de papéis espalhados pela cidade,
@@ -59,7 +61,9 @@ export default function HuntScreen() {
       />
 
       <View style={styles.latest}>
-        <Text style={styles.sectionTitle}>Últimos Santinhos encontrados</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Últimos Santinhos encontrados</Text>
+        </View>
         <View style={styles.latestList}>
           {latestSantinhos.map(({ capture, candidate, total }) => (
             <View key={capture.id} style={styles.santinhoRow}>
@@ -102,33 +106,45 @@ export default function HuntScreen() {
 
 const styles = StyleSheet.create({
   hero: {
-    gap: spacing.md,
+    gap: spacing.lg,
+  },
+  kickerWrap: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.alert,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
   kicker: {
-    color: colors.alert,
+    color: colors.asphalt,
     fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   title: {
-    color: colors.paper,
-    fontSize: type.title,
+    color: colors.asphalt,
+    fontSize: 42,
     fontWeight: '900',
-    lineHeight: 39,
+    lineHeight: 45,
     textTransform: 'uppercase',
   },
   body: {
-    color: colors.paper,
-    fontSize: type.body,
-    fontWeight: '700',
-    lineHeight: 24,
+    color: colors.steel,
+    fontSize: 18,
+    fontWeight: '600',
+    lineHeight: 27,
   },
   latest: {
-    gap: spacing.md,
+    gap: spacing.lg,
+  },
+  sectionHeader: {
+    borderBottomColor: colors.asphalt,
+    borderBottomWidth: 2,
+    paddingBottom: spacing.sm,
   },
   sectionTitle: {
-    color: colors.alert,
-    fontSize: 20,
+    color: colors.asphalt,
+    fontSize: 22,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
@@ -137,26 +153,26 @@ const styles = StyleSheet.create({
   },
   santinhoRow: {
     alignItems: 'center',
-    backgroundColor: colors.paper,
-    borderColor: colors.asphalt,
-    borderRadius: radii.sm,
-    borderWidth: 3,
+    backgroundColor: colors.card,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
     flexDirection: 'row',
-    gap: spacing.md,
-    padding: spacing.md,
+    gap: spacing.lg,
+    padding: spacing.lg,
   },
   thumb: {
     alignItems: 'center',
     aspectRatio: 1,
-    backgroundColor: colors.steel,
-    borderColor: colors.alert,
+    backgroundColor: colors.newsprint,
+    borderColor: colors.line,
     borderRadius: radii.sm,
-    borderWidth: 2,
+    borderWidth: 1,
     justifyContent: 'center',
-    width: 62,
+    width: 68,
   },
   thumbText: {
-    color: colors.alert,
+    color: colors.muted,
     fontSize: 13,
     fontWeight: '900',
   },
@@ -178,9 +194,7 @@ const styles = StyleSheet.create({
   totalBadge: {
     alignItems: 'center',
     backgroundColor: colors.alert,
-    borderColor: colors.asphalt,
-    borderRadius: radii.sm,
-    borderWidth: 2,
+    borderRadius: radii.md,
     minWidth: 58,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
@@ -199,13 +213,13 @@ const styles = StyleSheet.create({
   },
   aboutButton: {
     alignItems: 'center',
-    borderColor: colors.paper,
+    borderColor: colors.line,
     borderRadius: radii.sm,
-    borderWidth: 2,
+    borderWidth: 1,
     padding: spacing.md,
   },
   aboutText: {
-    color: colors.paper,
+    color: colors.asphalt,
     fontSize: 14,
     fontWeight: '900',
     textTransform: 'uppercase',

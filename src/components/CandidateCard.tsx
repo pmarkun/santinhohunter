@@ -28,10 +28,10 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
 const styles = StyleSheet.create({
   card: {
     alignItems: 'center',
-    backgroundColor: colors.paper,
-    borderColor: colors.asphalt,
+    backgroundColor: colors.card,
+    borderColor: colors.line,
     borderRadius: radii.md,
-    borderWidth: 3,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.md,
     padding: spacing.md,
@@ -39,9 +39,7 @@ const styles = StyleSheet.create({
   numberBadge: {
     alignItems: 'center',
     backgroundColor: colors.alert,
-    borderColor: colors.asphalt,
     borderRadius: radii.sm,
-    borderWidth: 2,
     minWidth: 72,
     padding: spacing.sm,
   },
@@ -60,7 +58,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   meta: {
-    color: colors.steel,
+    color: colors.muted,
     fontSize: 13,
     fontWeight: '700',
   },

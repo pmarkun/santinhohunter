@@ -33,32 +33,33 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   kicker: {
-    color: colors.alert,
+    color: colors.red,
     fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   title: {
-    color: colors.paper,
+    color: colors.asphalt,
     fontSize: 32,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   panel: {
-    backgroundColor: colors.steel,
-    borderColor: colors.alert,
-    borderWidth: 2,
+    backgroundColor: colors.card,
+    borderColor: colors.line,
+    borderRadius: 8,
+    borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.lg,
   },
   panelTitle: {
-    color: colors.alert,
+    color: colors.asphalt,
     fontSize: 18,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   panelBody: {
-    color: colors.paper,
+    color: colors.steel,
     fontSize: 15,
     fontWeight: '700',
     lineHeight: 22,

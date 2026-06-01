@@ -24,7 +24,15 @@ export function PrimaryActionButton({
         pressed && styles.pressed,
       ]}
     >
-      <Text style={[styles.label, variant === 'paper' && styles.darkLabel]}>{label}</Text>
+      <Text
+        style={[
+          styles.label,
+          variant === 'paper' && styles.darkLabel,
+          variant === 'red' && styles.lightLabel,
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -32,32 +40,36 @@ export function PrimaryActionButton({
 const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
-    borderColor: colors.asphalt,
-    borderRadius: radii.sm,
-    borderWidth: 3,
-    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
+    minHeight: 52,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
   },
   alert: {
     backgroundColor: colors.alert,
   },
   red: {
-    backgroundColor: colors.red,
+    backgroundColor: colors.asphalt,
   },
   paper: {
-    backgroundColor: colors.paper,
+    backgroundColor: 'transparent',
+    borderColor: colors.line,
+    borderWidth: 1,
   },
   label: {
     color: colors.asphalt,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   darkLabel: {
     color: colors.asphalt,
   },
+  lightLabel: {
+    color: colors.paper,
+  },
   pressed: {
-    opacity: 0.78,
-    transform: [{ translateY: 2 }],
+    opacity: 0.7,
   },
 });

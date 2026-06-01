@@ -30,10 +30,10 @@ export function RankingRow({ entry, position }: RankingRowProps) {
 const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
-    backgroundColor: colors.paper,
-    borderColor: colors.asphalt,
+    backgroundColor: colors.card,
+    borderColor: colors.line,
     borderRadius: radii.sm,
-    borderWidth: 3,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.md,
     padding: spacing.md,
@@ -61,9 +61,7 @@ const styles = StyleSheet.create({
   countBox: {
     alignItems: 'center',
     backgroundColor: colors.alert,
-    borderColor: colors.asphalt,
     borderRadius: radii.sm,
-    borderWidth: 2,
     minWidth: 70,
     padding: spacing.sm,
   },

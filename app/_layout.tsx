@@ -12,9 +12,9 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <Stack
           screenOptions={{
-            contentStyle: { backgroundColor: colors.asphalt },
-            headerStyle: { backgroundColor: colors.asphalt },
-            headerTintColor: colors.paper,
+            contentStyle: { backgroundColor: colors.newsprint },
+            headerStyle: { backgroundColor: colors.newsprint },
+            headerTintColor: colors.asphalt,
             headerTitleStyle: { fontWeight: '900' },
           }}
         >
@@ -22,7 +22,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="capture/camera" options={{ title: 'Caçar santinho' }} />
           <Stack.Screen name="capture/review" options={{ title: 'Conferir flagra' }} />
-          <Stack.Screen name="capture/manual-search" options={{ title: 'Buscar por numero' }} />
+          <Stack.Screen name="capture/manual-search" options={{ title: 'Buscar por número' }} />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

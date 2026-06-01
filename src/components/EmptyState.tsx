@@ -19,20 +19,20 @@ export function EmptyState({ title, body }: EmptyStateProps) {
 
 const styles = StyleSheet.create({
   box: {
-    borderColor: colors.alert,
+    backgroundColor: colors.card,
+    borderColor: colors.line,
     borderRadius: radii.sm,
-    borderStyle: 'dashed',
-    borderWidth: 3,
-    padding: spacing.lg,
+    borderWidth: 1,
+    padding: spacing.xl,
   },
   title: {
-    color: colors.alert,
+    color: colors.asphalt,
     fontSize: 20,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   body: {
-    color: colors.paper,
+    color: colors.muted,
     fontSize: 15,
     fontWeight: '700',
     marginTop: spacing.sm,

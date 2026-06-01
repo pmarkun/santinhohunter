@@ -18,7 +18,7 @@ export default function RankingScreen() {
   return (
     <AppScreen>
       <View>
-        <Text style={styles.kicker}>Ranking publico / SP</Text>
+        <Text style={styles.kicker}>Ranking público / SP</Text>
         <Text style={styles.title}>A pilha da sujeira</Text>
       </View>
 
@@ -55,14 +55,14 @@ export default function RankingScreen() {
 
 const styles = StyleSheet.create({
   kicker: {
-    color: colors.alert,
+    color: colors.red,
     fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   title: {
-    color: colors.paper,
-    fontSize: 32,
+    color: colors.asphalt,
+    fontSize: 36,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
@@ -72,19 +72,19 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   tab: {
-    backgroundColor: colors.steel,
+    backgroundColor: colors.card,
     borderColor: colors.line,
     borderRadius: radii.sm,
-    borderWidth: 2,
+    borderWidth: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
   activeTab: {
     backgroundColor: colors.alert,
-    borderColor: colors.paper,
+    borderColor: colors.alert,
   },
   tabText: {
-    color: colors.paper,
+    color: colors.asphalt,
     fontSize: 12,
     fontWeight: '900',
     textTransform: 'uppercase',

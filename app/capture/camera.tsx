@@ -117,20 +117,20 @@ const styles = StyleSheet.create({
     right: spacing.lg,
   },
   permission: {
-    backgroundColor: colors.asphalt,
+    backgroundColor: colors.newsprint,
     flex: 1,
     gap: spacing.lg,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   title: {
-    color: colors.alert,
+    color: colors.asphalt,
     fontSize: 32,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   body: {
-    color: colors.paper,
+    color: colors.steel,
     fontSize: 16,
     fontWeight: '700',
     lineHeight: 23,

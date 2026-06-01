@@ -38,27 +38,27 @@ export function TrashCounter({ count, label }: TrashCounterProps) {
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: colors.red,
-    borderColor: colors.paper,
+    backgroundColor: colors.card,
+    borderColor: colors.line,
     borderRadius: radii.md,
-    borderWidth: 2,
-    padding: spacing.sm,
+    borderWidth: 1,
+    padding: spacing.md,
   },
   stamp: {
-    borderColor: colors.asphalt,
+    borderColor: colors.alert,
     borderRadius: radii.sm,
     borderStyle: 'dashed',
-    borderWidth: 3,
+    borderWidth: 2,
     padding: spacing.lg,
   },
   count: {
-    color: colors.paper,
+    color: colors.asphalt,
     fontSize: type.counter,
     fontWeight: '900',
     lineHeight: 58,
   },
   label: {
-    color: colors.paper,
+    color: colors.steel,
     fontSize: type.body,
     fontWeight: '900',
     textTransform: 'uppercase',

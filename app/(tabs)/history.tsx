@@ -58,28 +58,28 @@ export default function HistoryScreen() {
 
 const styles = StyleSheet.create({
   kicker: {
-    color: colors.alert,
+    color: colors.red,
     fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   title: {
-    color: colors.paper,
+    color: colors.asphalt,
     fontSize: 32,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   item: {
-    backgroundColor: colors.paper,
-    borderColor: colors.asphalt,
+    backgroundColor: colors.card,
+    borderColor: colors.line,
     borderRadius: radii.sm,
-    borderWidth: 3,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.md,
     padding: spacing.md,
   },
   image: {
-    backgroundColor: colors.steel,
+    backgroundColor: colors.newsprint,
     borderRadius: radii.sm,
     height: 84,
     width: 84,

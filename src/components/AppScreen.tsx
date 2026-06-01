@@ -28,11 +28,11 @@ export function AppScreen({ children, scroll = true }: AppScreenProps) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.asphalt,
+    backgroundColor: colors.newsprint,
   },
   content: {
     flexGrow: 1,
-    gap: spacing.lg,
-    padding: spacing.lg,
+    gap: spacing.xl,
+    padding: spacing.xl,
   },
 });
