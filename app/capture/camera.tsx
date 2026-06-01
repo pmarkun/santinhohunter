@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryActionButton } from '@/components/PrimaryActionButton';
+import { setCaptureDraft } from '@/services/captureDraft';
 import { getCaptureLocation, type CaptureLocation } from '@/services/locationService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/layout';
@@ -49,15 +50,13 @@ export default function CameraScreen() {
         throw new Error('Não consegui salvar a foto.');
       }
 
-      router.push({
-        pathname: '/capture/review',
-        params: {
-          photoUri: photo.uri,
-          latitude: location.latitude?.toString(),
-          longitude: location.longitude?.toString(),
-          accuracy: location.accuracy?.toString(),
-        },
+      setCaptureDraft({
+        photoUri: photo.uri,
+        location,
+        capturedAt: new Date().toISOString(),
       });
+
+      router.push('/capture/review');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Não consegui capturar agora.';
       setError(message);

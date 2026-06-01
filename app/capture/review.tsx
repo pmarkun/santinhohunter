@@ -1,36 +1,59 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/AppScreen';
 import { PrimaryActionButton } from '@/components/PrimaryActionButton';
+import { clearCaptureDraft, getCaptureDraft } from '@/services/captureDraft';
 import { saveCapture } from '@/services/captureStorage';
-import { getDefaultUf } from '@/services/ufService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/layout';
-import type { CaptureReviewParams } from '@/types/navigation';
 
 export default function CaptureReviewScreen() {
-  const params = useLocalSearchParams<CaptureReviewParams>();
-  const photoUri = params.photoUri;
+  const draft = getCaptureDraft();
 
   async function saveWithoutCandidate() {
+    if (!draft) {
+      router.replace('/(tabs)/hunt');
+      return;
+    }
+
     const now = new Date().toISOString();
 
     await saveCapture({
       id: `cap-${Date.now()}`,
-      photoUri,
+      photoUri: draft.photoUri,
       createdAt: now,
-      capturedAt: now,
-      uf: getDefaultUf(),
+      capturedAt: draft.capturedAt,
+      uf: draft.location.uf,
       candidateMatches: [],
       status: 'needs_manual_match',
       syncStatus: 'pending_sync',
-      ...(params.latitude ? { latitude: Number(params.latitude) } : {}),
-      ...(params.longitude ? { longitude: Number(params.longitude) } : {}),
-      ...(params.accuracy ? { accuracy: Number(params.accuracy) } : {}),
+      ...(draft.location.latitude !== undefined ? { latitude: draft.location.latitude } : {}),
+      ...(draft.location.longitude !== undefined ? { longitude: draft.location.longitude } : {}),
+      ...(draft.location.accuracy !== undefined ? { accuracy: draft.location.accuracy } : {}),
+      ...(draft.location.city ? { city: draft.location.city } : {}),
     });
 
+    clearCaptureDraft();
     router.replace('/capture/manual-search');
+  }
+
+  if (!draft) {
+    return (
+      <AppScreen>
+        <View>
+          <Text style={styles.kicker}>Sem flagra carregado</Text>
+          <Text style={styles.title}>A foto escapou.</Text>
+        </View>
+        <Text style={styles.helpText}>
+          Volte para a câmera e tente fotografar o santinho de novo.
+        </Text>
+        <PrimaryActionButton
+          label="Voltar para capturar"
+          onPress={() => router.replace('/capture/camera')}
+        />
+      </AppScreen>
+    );
   }
 
   return (
@@ -40,13 +63,16 @@ export default function CaptureReviewScreen() {
         <Text style={styles.title}>Esse aqui tava dando sopa?</Text>
       </View>
 
-      <Image source={{ uri: photoUri }} style={styles.preview} />
+      <Image source={{ uri: draft.photoUri }} style={styles.preview} />
 
       <View style={styles.metaBox}>
         <Text style={styles.metaTitle}>Carimbo do flagra</Text>
-        <Text style={styles.meta}>Hora: {new Date().toLocaleString()}</Text>
         <Text style={styles.meta}>
-          Local: {params.latitude && params.longitude ? 'capturado' : 'sem precisão'}
+          Hora: {new Date(draft.capturedAt).toLocaleString()}
+        </Text>
+        <Text style={styles.meta}>
+          Local:{' '}
+          {draft.location.latitude && draft.location.longitude ? 'capturado' : 'sem precisão'}
         </Text>
       </View>
 
@@ -95,5 +121,11 @@ const styles = StyleSheet.create({
     color: colors.steel,
     fontSize: 14,
     fontWeight: '700',
+  },
+  helpText: {
+    color: colors.steel,
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 24,
   },
 });
