@@ -1,3 +1,9 @@
+fastapi
+httpx
+numpy
+pillow
+python-multipart
+uvicorn
 deepface>=0.0.93
 tensorflow-cpu>=2.16,<2.18
 tf-keras>=2.16,<2.18

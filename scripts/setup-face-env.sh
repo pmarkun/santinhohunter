@@ -3,5 +3,8 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-uv venv .venv
+if [ ! -x .venv/bin/python ]; then
+  uv venv .venv
+fi
+
 uv pip install -r backend/requirements-face.txt
