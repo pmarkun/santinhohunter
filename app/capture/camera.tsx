@@ -4,14 +4,28 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryActionButton } from '@/components/PrimaryActionButton';
-import { getCaptureLocation } from '@/services/locationService';
+import { getCaptureLocation, type CaptureLocation } from '@/services/locationService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/layout';
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(message));
+    }, timeoutMs);
+
+    promise
+      .then(resolve)
+      .catch(reject)
+      .finally(() => clearTimeout(timeoutId));
+  });
+}
 
 export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [capturing, setCapturing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function takePicture() {
     if (!cameraRef.current || capturing) {
@@ -19,12 +33,21 @@ export default function CameraScreen() {
     }
 
     setCapturing(true);
+    setError(null);
 
     try {
-      const [photo, location] = await Promise.all([
+      const photo = await withTimeout(
         cameraRef.current.takePictureAsync({ quality: 0.72 }),
-        getCaptureLocation(),
-      ]);
+        10000,
+        'A câmera demorou demais para responder.',
+      );
+      const location = await getCaptureLocation().catch(
+        (): CaptureLocation => ({ uf: 'SP' }),
+      );
+
+      if (!photo?.uri) {
+        throw new Error('Não consegui salvar a foto.');
+      }
 
       router.push({
         pathname: '/capture/review',
@@ -35,6 +58,9 @@ export default function CameraScreen() {
           accuracy: location.accuracy?.toString(),
         },
       });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Não consegui capturar agora.';
+      setError(message);
     } finally {
       setCapturing(false);
     }
@@ -67,6 +93,7 @@ export default function CameraScreen() {
         <Text style={styles.frameText}>Enquadra o lixo eleitoral</Text>
       </View>
       <View style={styles.controls}>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
         <PrimaryActionButton
           label={capturing ? 'Flagrando...' : 'Fotografar'}
           onPress={takePicture}
@@ -112,9 +139,19 @@ const styles = StyleSheet.create({
   },
   controls: {
     bottom: spacing.xl,
+    gap: spacing.md,
     left: spacing.lg,
     position: 'absolute',
     right: spacing.lg,
+  },
+  error: {
+    backgroundColor: colors.paper,
+    borderRadius: 8,
+    color: colors.red,
+    fontSize: 14,
+    fontWeight: '900',
+    padding: spacing.md,
+    textAlign: 'center',
   },
   permission: {
     backgroundColor: colors.newsprint,
