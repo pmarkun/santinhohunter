@@ -51,11 +51,11 @@ export default function CameraScreen() {
   if (!permission.granted) {
     return (
       <View style={styles.permission}>
-        <Text style={styles.title}>Sem camera nao tem caca.</Text>
+        <Text style={styles.title}>Sem câmera não tem caça.</Text>
         <Text style={styles.body}>
-          Libera a camera para fotografar o santinho jogado na rua.
+          Libera a câmera para fotografar o santinho jogado na rua.
         </Text>
-        <PrimaryActionButton label="Liberar camera" onPress={requestPermission} />
+        <PrimaryActionButton label="Liberar câmera" onPress={requestPermission} />
       </View>
     );
   }

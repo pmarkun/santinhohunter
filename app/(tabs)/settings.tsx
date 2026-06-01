@@ -13,10 +13,10 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Politica de uso</Text>
+        <Text style={styles.panelTitle}>Política de uso</Text>
         <Text style={styles.panelBody}>
-          Este app registra lixo eleitoral em espaco publico. A camera serve para o
-          flagra, a localizacao serve para o mapa aproximado, e o reconhecimento compara
+          Este app registra lixo eleitoral em espaço público. A câmera serve para o
+          flagra, a localização serve para o mapa aproximado, e o reconhecimento compara
           santinhos com fotos oficiais de candidatos.
         </Text>
       </View>
@@ -24,7 +24,7 @@ export default function SettingsScreen() {
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>Sem login no MVP</Text>
         <Text style={styles.panelBody}>
-          Menos cadastro, mais rua. Capturas ficam locais ate sincronizar.
+          Menos cadastro, mais rua. Capturas ficam locais até sincronizar.
         </Text>
       </View>
     </AppScreen>

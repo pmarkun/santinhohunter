@@ -40,7 +40,7 @@ export default function RankingScreen() {
       <View style={styles.list}>
         {ranking.length === 0 ? (
           <EmptyState
-            body="Ainda nao apareceu lixo eleitoral para esse cargo. A rua esta quieta, por enquanto."
+            body="Ainda não apareceu lixo eleitoral para esse cargo. A rua está quieta, por enquanto."
             title="Nada na pilha"
           />
         ) : (

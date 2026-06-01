@@ -20,7 +20,7 @@ export default function RootLayout() {
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="capture/camera" options={{ title: 'Cacar santinho' }} />
+          <Stack.Screen name="capture/camera" options={{ title: 'Caçar santinho' }} />
           <Stack.Screen name="capture/review" options={{ title: 'Conferir flagra' }} />
           <Stack.Screen name="capture/manual-search" options={{ title: 'Buscar por numero' }} />
         </Stack>

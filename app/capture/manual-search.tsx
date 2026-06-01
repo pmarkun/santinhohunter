@@ -96,7 +96,7 @@ export default function ManualSearchScreen() {
       </View>
 
       <PrimaryActionButton
-        label="Voltar para a caca"
+        label="Voltar para a caça"
         onPress={() => router.replace('/(tabs)/hunt')}
         variant="paper"
       />

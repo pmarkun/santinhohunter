@@ -24,7 +24,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="hunt"
         options={{
-          title: 'Cacar',
+          title: 'Caçar',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons color={String(color)} name="camera-iris" size={size} />
           ),

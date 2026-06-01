@@ -38,6 +38,8 @@ export function buildRanking(params: {
 
 export function getMockCaptures(uf: Uf): SantinhoCapture[] {
   const now = new Date();
+  const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60000);
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60000);
 
   return [
     {
@@ -56,8 +58,8 @@ export function getMockCaptures(uf: Uf): SantinhoCapture[] {
     {
       id: 'cap-2',
       photoUri: 'mock://santinho-2',
-      createdAt: now.toISOString(),
-      capturedAt: now.toISOString(),
+      createdAt: fifteenMinutesAgo.toISOString(),
+      capturedAt: fifteenMinutesAgo.toISOString(),
       uf,
       city: 'Sao Paulo',
       candidateMatches: [],
@@ -69,8 +71,8 @@ export function getMockCaptures(uf: Uf): SantinhoCapture[] {
     {
       id: 'cap-3',
       photoUri: 'mock://santinho-3',
-      createdAt: now.toISOString(),
-      capturedAt: now.toISOString(),
+      createdAt: twoHoursAgo.toISOString(),
+      capturedAt: twoHoursAgo.toISOString(),
       uf,
       city: 'Sao Paulo',
       candidateMatches: [],
