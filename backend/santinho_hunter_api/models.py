@@ -10,6 +10,9 @@ Office = Literal[
     "federal_deputy",
     "state_deputy",
     "district_deputy",
+    "mayor",
+    "vice_mayor",
+    "councilor",
 ]
 
 
