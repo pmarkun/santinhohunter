@@ -34,6 +34,7 @@ Variáveis úteis:
 - `SANTINHO_FACE_MODEL=ArcFace`
 - `SANTINHO_FACE_DETECTOR=retinaface`
 - `SANTINHO_EMBEDDINGS_PATH=backend/data/candidate_embeddings.sample.json`
+- `SANTINHO_CORS_ORIGINS=*`
 
 ## Fotos Do TSE
 

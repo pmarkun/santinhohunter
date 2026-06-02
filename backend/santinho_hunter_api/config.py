@@ -11,6 +11,7 @@ class Settings:
     face_device: str
     match_limit: int
     max_upload_bytes: int
+    cors_origins: list[str]
 
 
 def get_settings() -> Settings:
@@ -26,4 +27,9 @@ def get_settings() -> Settings:
         face_device=os.getenv("SANTINHO_FACE_DEVICE", "auto"),
         match_limit=int(os.getenv("SANTINHO_MATCH_LIMIT", "5")),
         max_upload_bytes=int(os.getenv("SANTINHO_MAX_UPLOAD_BYTES", "7000000")),
+        cors_origins=[
+            origin.strip()
+            for origin in os.getenv("SANTINHO_CORS_ORIGINS", "*").split(",")
+            if origin.strip()
+        ],
     )

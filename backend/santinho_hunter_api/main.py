@@ -1,4 +1,5 @@
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 
 from santinho_hunter_api.config import get_settings
 from santinho_hunter_api.face.deepface_provider import DeepFaceProvider, DeepFaceUnavailableError
@@ -15,6 +16,13 @@ face_provider = DeepFaceProvider(
 )
 
 app = FastAPI(title="Santinho Hunter API")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health", response_model=HealthResponse)
