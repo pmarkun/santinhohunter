@@ -7,6 +7,9 @@ export const officeLabels: Record<Office, string> = {
   federal_deputy: 'Dep. Federal',
   state_deputy: 'Dep. Estadual',
   district_deputy: 'Dep. Distrital',
+  mayor: 'Prefeito',
+  vice_mayor: 'Vice-prefeito',
+  councilor: 'Vereador',
 };
 
 export const rankingOffices: Office[] = [

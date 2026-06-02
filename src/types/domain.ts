@@ -33,7 +33,10 @@ export type Office =
   | 'senator'
   | 'federal_deputy'
   | 'state_deputy'
-  | 'district_deputy';
+  | 'district_deputy'
+  | 'mayor'
+  | 'vice_mayor'
+  | 'councilor';
 
 export type CaptureStatus =
   | 'draft'
@@ -59,6 +62,11 @@ export type Candidate = {
   fullName: string;
   party: string;
   photoUrl?: string;
+};
+
+export type MatchedCandidate = Candidate & {
+  confidence: number;
+  distance: number;
 };
 
 export type CandidateMatch = {
