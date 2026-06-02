@@ -4,11 +4,12 @@ Este repo usa dois servicos Railway apontando para o mesmo repositorio.
 
 ## API
 
-- Config as Code: `/railway/api.toml`
+- CLI: `railway up backend --path-as-root --service santinho-api`
+- Config as Code: `backend/railway.toml`
 - Builder: Dockerfile em `backend/Dockerfile`
 - Healthcheck: `/health`
 - Variaveis:
-  - `SANTINHO_EMBEDDINGS_PATH=backend/data/candidate_embeddings.pedro-marina.json`
+  - `SANTINHO_EMBEDDINGS_PATH=data/candidate_embeddings.pedro-marina.json`
   - `SANTINHO_CORS_ORIGINS=https://seu-pwa.up.railway.app`
   - `SANTINHO_FACE_DEVICE=auto`
   - `SANTINHO_FACE_MODEL=ArcFace`
@@ -19,7 +20,8 @@ A base grande deve entrar depois por volume, bucket ou artefato gerado em pipeli
 
 ## PWA
 
-- Config as Code: `/railway/web.toml`
+- CLI: `railway up --service santinho-web`
+- Config as Code: `railway.toml`
 - Variaveis:
   - `EXPO_PUBLIC_SANTINHO_API_BASE_URL=https://sua-api.up.railway.app`
 
