@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppScreen } from '@/components/AppScreen';
@@ -7,30 +7,55 @@ import { CandidateCard } from '@/components/CandidateCard';
 import { EmptyState } from '@/components/EmptyState';
 import { PrimaryActionButton } from '@/components/PrimaryActionButton';
 import { officeLabels, rankingOffices } from '@/data/offices';
-import { searchCandidatesByNumber } from '@/services/candidateService';
+import { searchCandidatesByNumberFromApi } from '@/services/candidateService';
 import { confirmLatestCaptureCandidate } from '@/services/captureStorage';
+import { syncCapture } from '@/services/syncService';
+import { getStoredUf } from '@/services/ufService';
 import { colors } from '@/theme/colors';
 import { radii, spacing } from '@/theme/layout';
-import type { Office } from '@/types/domain';
+import type { Candidate, Office, Uf } from '@/types/domain';
 
 export default function ManualSearchScreen() {
   const [number, setNumber] = useState('');
   const [office, setOffice] = useState<Office | undefined>(undefined);
-  const results = useMemo(
-    () => searchCandidatesByNumber({ uf: 'SP', number, ...(office ? { office } : {}) }),
-    [number, office],
-  );
+  const [uf, setUf] = useState<Uf>('SP');
+  const [results, setResults] = useState<Candidate[]>([]);
+
+  useEffect(() => {
+    getStoredUf().then(setUf);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    searchCandidatesByNumberFromApi({
+      uf,
+      number,
+      ...(office ? { office } : {}),
+    }).then((candidates) => {
+      if (active) {
+        setResults(candidates);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [number, office, uf]);
 
   async function confirmCandidate(
     candidateId: string,
     candidateNumber: string,
     candidateOffice: Office,
   ) {
-    await confirmLatestCaptureCandidate({
+    const confirmed = await confirmLatestCaptureCandidate({
       candidateId,
       candidateNumber,
       office: candidateOffice,
     });
+    if (confirmed) {
+      await syncCapture(confirmed);
+    }
     router.replace('/(tabs)/history');
   }
 
@@ -76,10 +101,7 @@ export default function ManualSearchScreen() {
 
       <View style={styles.results}>
         {results.length === 0 ? (
-          <EmptyState
-            body="Digite o número que aparece no santinho. A base atual é fixture da eleição anterior."
-            title="Sem candidato ainda"
-          />
+          <EmptyState body="Digite o número que aparece no santinho." title="Sem candidato ainda" />
         ) : (
           results.map((candidate) => (
             <Pressable

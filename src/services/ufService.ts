@@ -1,4 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import type { Uf } from '@/types/domain';
+
+const USER_UF_KEY = 'santinhohunter:userUf';
 
 export const ufs: Uf[] = [
   'AC',
@@ -41,4 +45,13 @@ export function normalizeUf(value: string | null | undefined): Uf | null {
 
 export function getDefaultUf(): Uf {
   return 'SP';
+}
+
+export async function getStoredUf(): Promise<Uf> {
+  const stored = normalizeUf(await AsyncStorage.getItem(USER_UF_KEY));
+  return stored ?? getDefaultUf();
+}
+
+export async function saveStoredUf(uf: Uf): Promise<void> {
+  await AsyncStorage.setItem(USER_UF_KEY, uf);
 }

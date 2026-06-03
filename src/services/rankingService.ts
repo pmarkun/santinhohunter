@@ -1,5 +1,23 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { getCandidatesByUf } from '@/services/candidateService';
+import { apiCandidateToCandidate, type ApiCandidate } from '@/services/apiCandidate';
+import { getApiBaseUrl } from '@/services/apiConfig';
 import type { Office, RankingEntry, SantinhoCapture, Uf } from '@/types/domain';
+
+type ApiRankingEntry = {
+  candidate: ApiCandidate;
+  count: number;
+  last_capture_at: string;
+};
+
+type ApiRankingResponse = {
+  entries: ApiRankingEntry[];
+};
+
+function rankingCacheKey(uf: Uf, office: Office): string {
+  return `santinhohunter:ranking:${uf}:${office}`;
+}
 
 export function buildRanking(params: {
   uf: Uf;
@@ -34,6 +52,43 @@ export function buildRanking(params: {
 
       return right.lastCaptureAt.localeCompare(left.lastCaptureAt);
     });
+}
+
+export async function fetchPublicRanking(params: {
+  uf: Uf;
+  office: Office;
+}): Promise<RankingEntry[]> {
+  const query = new URLSearchParams({ uf: params.uf, office: params.office });
+
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/rankings?${query.toString()}`);
+    if (!response.ok) {
+      throw new Error(`Ranking falhou com status ${response.status}`);
+    }
+
+    const payload = (await response.json()) as ApiRankingResponse;
+    const entries = payload.entries.map((entry) => ({
+      candidate: apiCandidateToCandidate(entry.candidate, params.uf),
+      count: entry.count,
+      lastCaptureAt: entry.last_capture_at,
+    }));
+    await AsyncStorage.setItem(rankingCacheKey(params.uf, params.office), JSON.stringify(entries));
+    return entries;
+  } catch {
+    const cached = await AsyncStorage.getItem(rankingCacheKey(params.uf, params.office));
+    if (cached) {
+      const parsed = JSON.parse(cached) as RankingEntry[];
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+
+    return buildRanking({
+      uf: params.uf,
+      office: params.office,
+      captures: getMockCaptures(params.uf),
+    });
+  }
 }
 
 export function getMockCaptures(uf: Uf): SantinhoCapture[] {

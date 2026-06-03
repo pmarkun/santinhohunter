@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { apiCandidateToCandidate as mapApiCandidate } from '@/services/apiCandidate';
+import { getApiBaseUrl } from '@/services/apiConfig';
 import type { MatchedCandidate, Office, Uf } from '@/types/domain';
 
 type ApiMatchCandidate = {
@@ -23,7 +25,7 @@ export type MatchSantinhoPhotoParams = {
 };
 
 export function getMatchApiBaseUrl(): string {
-  return process.env.EXPO_PUBLIC_SANTINHO_API_BASE_URL ?? 'http://127.0.0.1:8011';
+  return getApiBaseUrl();
 }
 
 export async function matchSantinhoPhoto(
@@ -68,14 +70,19 @@ async function appendPhoto(body: FormData, photoUri: string): Promise<void> {
 
 function apiCandidateToCandidate(candidate: ApiMatchCandidate, uf: Uf): MatchedCandidate {
   return {
-    id: candidate.candidate_id,
-    electionYear: 2024,
-    uf,
-    office: candidate.office,
-    number: candidate.number,
-    ballotName: candidate.ballot_name,
-    fullName: candidate.ballot_name,
-    party: candidate.party,
+    ...mapApiCandidate(
+      {
+        candidate_id: candidate.candidate_id,
+        election_year: 2024,
+        uf,
+        office: candidate.office,
+        number: candidate.number,
+        ballot_name: candidate.ballot_name,
+        full_name: candidate.ballot_name,
+        party: candidate.party,
+      },
+      uf,
+    ),
     confidence: candidate.confidence,
     distance: candidate.distance,
   };

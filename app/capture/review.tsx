@@ -8,9 +8,10 @@ import { PrimaryActionButton } from '@/components/PrimaryActionButton';
 import { clearCaptureDraft, getCaptureDraft } from '@/services/captureDraft';
 import { saveCapture } from '@/services/captureStorage';
 import { matchSantinhoPhoto } from '@/services/matchService';
+import { syncCapture } from '@/services/syncService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/layout';
-import type { MatchedCandidate } from '@/types/domain';
+import type { MatchedCandidate, SantinhoCapture } from '@/types/domain';
 
 export default function CaptureReviewScreen() {
   const draft = getCaptureDraft();
@@ -28,7 +29,7 @@ export default function CaptureReviewScreen() {
 
     const now = new Date().toISOString();
 
-    await saveCapture({
+    const capture: SantinhoCapture = {
       id: `cap-${Date.now()}`,
       photoUri: draft.photoUri,
       createdAt: now,
@@ -41,7 +42,9 @@ export default function CaptureReviewScreen() {
       ...(draft.location.longitude !== undefined ? { longitude: draft.location.longitude } : {}),
       ...(draft.location.accuracy !== undefined ? { accuracy: draft.location.accuracy } : {}),
       ...(draft.location.city ? { city: draft.location.city } : {}),
-    });
+    };
+
+    await saveCapture(capture);
 
     clearCaptureDraft();
     router.replace(status === 'rejected' ? '/(tabs)/history' : '/capture/manual-search');
@@ -83,7 +86,7 @@ export default function CaptureReviewScreen() {
 
     const now = new Date().toISOString();
 
-    await saveCapture({
+    const capture: SantinhoCapture = {
       id: `cap-${Date.now()}`,
       photoUri: draft.photoUri,
       createdAt: now,
@@ -103,7 +106,10 @@ export default function CaptureReviewScreen() {
       ...(draft.location.longitude !== undefined ? { longitude: draft.location.longitude } : {}),
       ...(draft.location.accuracy !== undefined ? { accuracy: draft.location.accuracy } : {}),
       ...(draft.location.city ? { city: draft.location.city } : {}),
-    });
+    };
+
+    await saveCapture(capture);
+    await syncCapture(capture);
 
     clearCaptureDraft();
     router.replace('/(tabs)/history');
@@ -151,7 +157,7 @@ export default function CaptureReviewScreen() {
 
       {matches.length > 0 ? (
         <View style={styles.matches}>
-          <Text style={styles.metaTitle}>Possíveis donos do lixo</Text>
+          <Text style={styles.metaTitle}>Parece ser</Text>
           {matches.map((candidate) => (
             <View key={candidate.id} style={styles.matchItem}>
               <CandidateCard candidate={candidate} />
@@ -173,7 +179,7 @@ export default function CaptureReviewScreen() {
         onPress={runFaceMatch}
       />
       <PrimaryActionButton
-        label="Buscar pelo número"
+        label="Não é esse, buscar por número"
         onPress={() => saveWithoutCandidate()}
         variant="paper"
       />

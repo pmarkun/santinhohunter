@@ -1,24 +1,49 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/AppScreen';
 import { EmptyState } from '@/components/EmptyState';
 import { RankingRow } from '@/components/RankingRow';
 import { officeLabels, rankingOffices } from '@/data/offices';
-import { buildRanking, getMockCaptures } from '@/services/rankingService';
+import { fetchPublicRanking } from '@/services/rankingService';
+import { syncPendingCaptures } from '@/services/syncService';
+import { getStoredUf } from '@/services/ufService';
 import { colors } from '@/theme/colors';
 import { radii, spacing } from '@/theme/layout';
-import type { Office } from '@/types/domain';
+import type { Office, RankingEntry, Uf } from '@/types/domain';
 
 export default function RankingScreen() {
-  const [office, setOffice] = useState<Office>('governor');
-  const captures = useMemo(() => getMockCaptures('SP'), []);
-  const ranking = useMemo(() => buildRanking({ uf: 'SP', office, captures }), [captures, office]);
+  const [office, setOffice] = useState<Office>('councilor');
+  const [uf, setUf] = useState<Uf>('SP');
+  const [ranking, setRanking] = useState<RankingEntry[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      async function loadRanking() {
+        const storedUf = await getStoredUf();
+        await syncPendingCaptures();
+        const entries = await fetchPublicRanking({ uf: storedUf, office });
+        if (active) {
+          setUf(storedUf);
+          setRanking(entries);
+        }
+      }
+
+      loadRanking();
+
+      return () => {
+        active = false;
+      };
+    }, [office]),
+  );
 
   return (
     <AppScreen>
       <View>
-        <Text style={styles.kicker}>Ranking público / SP</Text>
+        <Text style={styles.kicker}>Ranking público / {uf}</Text>
         <Text style={styles.title}>A pilha da sujeira</Text>
       </View>
 

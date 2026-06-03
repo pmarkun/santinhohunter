@@ -5,6 +5,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@/components/AppScreen';
 import { EmptyState } from '@/components/EmptyState';
 import { getStoredCaptures } from '@/services/captureStorage';
+import { syncPendingCaptures } from '@/services/syncService';
 import { colors } from '@/theme/colors';
 import { radii, spacing } from '@/theme/layout';
 import type { SantinhoCapture } from '@/types/domain';
@@ -16,7 +17,7 @@ export default function HistoryScreen() {
     useCallback(() => {
       let active = true;
 
-      getStoredCaptures().then((items) => {
+      syncPendingCaptures().then(() => getStoredCaptures()).then((items) => {
         if (active) {
           setCaptures(items);
         }
@@ -47,7 +48,7 @@ export default function HistoryScreen() {
             <View style={styles.itemBody}>
               <Text style={styles.itemTitle}>Santinho registrado</Text>
               <Text style={styles.itemMeta}>{new Date(capture.capturedAt).toLocaleString()}</Text>
-              <Text style={styles.sync}>{capture.syncStatus}</Text>
+              <Text style={styles.sync}>{syncStatusLabel(capture.syncStatus)}</Text>
             </View>
           </View>
         ))
@@ -106,3 +107,15 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 });
+
+function syncStatusLabel(status: SantinhoCapture['syncStatus']): string {
+  const labels: Record<SantinhoCapture['syncStatus'], string> = {
+    local_only: 'local',
+    pending_sync: 'pendente',
+    syncing: 'sincronizando',
+    synced: 'sincronizado',
+    sync_failed: 'falhou',
+  };
+
+  return labels[status];
+}

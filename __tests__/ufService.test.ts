@@ -1,6 +1,12 @@
-import { getDefaultUf, normalizeUf } from '@/services/ufService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { getDefaultUf, getStoredUf, normalizeUf, saveStoredUf } from '@/services/ufService';
 
 describe('ufService', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+  });
+
   it('normalizes valid UF values', () => {
     expect(normalizeUf(' sp ')).toBe('SP');
     expect(normalizeUf('rj')).toBe('RJ');
@@ -13,5 +19,11 @@ describe('ufService', () => {
 
   it('uses SP as the MVP default UF', () => {
     expect(getDefaultUf()).toBe('SP');
+  });
+
+  it('persists the selected UF', async () => {
+    await saveStoredUf('RJ');
+
+    await expect(getStoredUf()).resolves.toBe('RJ');
   });
 });

@@ -1,49 +1,48 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/AppScreen';
+import { EmptyState } from '@/components/EmptyState';
 import { PrimaryActionButton } from '@/components/PrimaryActionButton';
-import { findCandidateById } from '@/services/candidateService';
-import { getMockCaptures } from '@/services/rankingService';
+import { fetchPublicRanking } from '@/services/rankingService';
+import { syncPendingCaptures } from '@/services/syncService';
 import { formatRelativeTime } from '@/services/timeService';
+import { getStoredUf } from '@/services/ufService';
 import { colors } from '@/theme/colors';
 import { radii, spacing } from '@/theme/layout';
 import { type } from '@/theme/typography';
+import type { RankingEntry, Uf } from '@/types/domain';
 
 export default function HuntScreen() {
-  const latestSantinhos = useMemo(() => {
-    const captures = getMockCaptures('SP');
-    const countsByCandidate = captures.reduce<Record<string, number>>((acc, capture) => {
-      if (capture.selectedCandidateId) {
-        acc[capture.selectedCandidateId] = (acc[capture.selectedCandidateId] ?? 0) + 1;
+  const [uf, setUf] = useState<Uf>('SP');
+  const [latestSantinhos, setLatestSantinhos] = useState<RankingEntry[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadLatest() {
+      const storedUf = await getStoredUf();
+      await syncPendingCaptures();
+      const entries = await fetchPublicRanking({ uf: storedUf, office: 'councilor' });
+      if (active) {
+        setUf(storedUf);
+        setLatestSantinhos(entries.slice(0, 3));
       }
+    }
 
-      return acc;
-    }, {});
+    loadLatest();
 
-    return captures
-      .filter((capture) => capture.status === 'confirmed' && capture.selectedCandidateId)
-      .slice(0, 3)
-      .map((capture) => {
-        const candidate = findCandidateById(capture.selectedCandidateId ?? '');
-
-        return candidate
-          ? {
-              capture,
-              candidate,
-              total: countsByCandidate[candidate.id] ?? 0,
-            }
-          : null;
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null);
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
     <AppScreen>
       <View style={styles.hero}>
         <View style={styles.kickerWrap}>
-          <Text style={styles.kicker}>Eleição Geral 2026 / SP</Text>
+          <Text style={styles.kicker}>Eleição Geral 2026 / {uf}</Text>
         </View>
         <Text style={styles.title}>Caçadores de Santinhos</Text>
         <Text style={styles.body}>
@@ -65,21 +64,27 @@ export default function HuntScreen() {
           <Text style={styles.sectionTitle}>Últimos Santinhos encontrados</Text>
         </View>
         <View style={styles.latestList}>
-          {latestSantinhos.map(({ capture, candidate, total }) => (
-            <View key={capture.id} style={styles.santinhoRow}>
+          {latestSantinhos.length === 0 ? (
+            <EmptyState
+              body="Quando a primeira captura sincronizar, ela entra no ranking público."
+              title="Sem lixo contado ainda"
+            />
+          ) : null}
+          {latestSantinhos.map((entry) => (
+            <View key={entry.candidate.id} style={styles.santinhoRow}>
               <View style={styles.thumb}>
                 <Text style={styles.thumbText}>IMG</Text>
               </View>
               <View style={styles.santinhoBody}>
                 <Text style={styles.santinhoName}>
-                  {candidate.ballotName} - {candidate.party}
+                  {entry.candidate.ballotName} - {entry.candidate.party}
                 </Text>
                 <Text style={styles.santinhoTime}>
-                  {formatRelativeTime(capture.capturedAt)}
+                  {formatRelativeTime(entry.lastCaptureAt)}
                 </Text>
               </View>
               <View style={styles.totalBadge}>
-                <Text style={styles.totalValue}>{total}</Text>
+                <Text style={styles.totalValue}>{entry.count}</Text>
                 <Text style={styles.totalLabel}>total</Text>
               </View>
             </View>

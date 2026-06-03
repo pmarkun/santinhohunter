@@ -22,6 +22,36 @@ export async function saveCapture(capture: SantinhoCapture): Promise<SantinhoCap
   return nextCaptures;
 }
 
+export async function replaceStoredCaptures(
+  captures: SantinhoCapture[],
+): Promise<SantinhoCapture[]> {
+  await AsyncStorage.setItem(CAPTURES_KEY, JSON.stringify(captures));
+  return captures;
+}
+
+export async function updateStoredCapture(
+  captureId: string,
+  updater: (capture: SantinhoCapture) => SantinhoCapture,
+): Promise<SantinhoCapture | null> {
+  const captures = await getStoredCaptures();
+  let updatedCapture: SantinhoCapture | null = null;
+  const nextCaptures = captures.map((capture) => {
+    if (capture.id !== captureId) {
+      return capture;
+    }
+
+    updatedCapture = updater(capture);
+    return updatedCapture;
+  });
+
+  if (!updatedCapture) {
+    return null;
+  }
+
+  await replaceStoredCaptures(nextCaptures);
+  return updatedCapture;
+}
+
 export async function confirmLatestCaptureCandidate(params: {
   candidateId: string;
   candidateNumber: string;

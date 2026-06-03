@@ -1,4 +1,6 @@
-import { buildRanking } from '@/services/rankingService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { buildRanking, fetchPublicRanking } from '@/services/rankingService';
 import type { SantinhoCapture } from '@/types/domain';
 
 const baseCapture: SantinhoCapture = {
@@ -13,6 +15,11 @@ const baseCapture: SantinhoCapture = {
 };
 
 describe('rankingService', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    jest.restoreAllMocks();
+  });
+
   it('orders confirmed captures by count', () => {
     const captures: SantinhoCapture[] = [
       {
@@ -63,5 +70,65 @@ describe('rankingService', () => {
     const ranking = buildRanking({ uf: 'SP', office: 'governor', captures });
 
     expect(ranking).toEqual([]);
+  });
+
+  it('uses public ranking API and caches the latest result', async () => {
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: jest.fn(async () => ({
+        entries: [
+          {
+            candidate: {
+              id: '250002052120',
+              election_year: 2024,
+              uf: 'SP',
+              office: 'councilor',
+              number: '18888',
+              ballot_name: 'PEDRO DA IA',
+              full_name: 'PEDRO DA IA',
+              party: 'REDE',
+            },
+            count: 3,
+            last_capture_at: '2026-06-02T12:00:00Z',
+          },
+        ],
+      })),
+    } as unknown as Response);
+
+    const ranking = await fetchPublicRanking({ uf: 'SP', office: 'councilor' });
+
+    expect(ranking[0]?.candidate.id).toBe('250002052120');
+    expect(ranking[0]?.count).toBe(3);
+    await expect(
+      AsyncStorage.getItem('santinhohunter:ranking:SP:councilor'),
+    ).resolves.toContain('PEDRO DA IA');
+  });
+
+  it('falls back to cached ranking when the API is offline', async () => {
+    await AsyncStorage.setItem(
+      'santinhohunter:ranking:SP:councilor',
+      JSON.stringify([
+        {
+          candidate: {
+            id: '250002052120',
+            electionYear: 2024,
+            uf: 'SP',
+            office: 'councilor',
+            number: '18888',
+            ballotName: 'PEDRO DA IA',
+            fullName: 'PEDRO DA IA',
+            party: 'REDE',
+          },
+          count: 1,
+          lastCaptureAt: '2026-06-02T12:00:00Z',
+        },
+      ]),
+    );
+    jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
+
+    const ranking = await fetchPublicRanking({ uf: 'SP', office: 'councilor' });
+
+    expect(ranking[0]?.candidate.id).toBe('250002052120');
+    expect(ranking[0]?.count).toBe(1);
   });
 });
