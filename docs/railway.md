@@ -8,7 +8,9 @@ Este repo usa dois servicos Railway apontando para o mesmo repositorio.
 - Config as Code: `backend/railway.toml`
 - Builder: Dockerfile em `backend/Dockerfile`
 - Healthcheck: `/health`
+- Banco: Postgres Railway, criado com `railway add --database postgres`
 - Variaveis:
+  - `DATABASE_URL=${{Postgres.DATABASE_URL}}`
   - `SANTINHO_EMBEDDINGS_PATH=data/candidate_embeddings.pedro-marina.json`
   - `SANTINHO_CORS_ORIGINS=https://seu-pwa.up.railway.app`
   - `SANTINHO_FACE_DEVICE=auto`
