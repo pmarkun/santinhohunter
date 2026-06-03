@@ -1,4 +1,5 @@
 data/tse/
+data/*.sqlite3
 .pytest_cache/
 __pycache__/
 *.pyc

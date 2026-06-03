@@ -2,6 +2,7 @@ fastapi
 httpx
 numpy
 pillow
+psycopg[binary]
 python-multipart
 uvicorn
 deepface>=0.0.93

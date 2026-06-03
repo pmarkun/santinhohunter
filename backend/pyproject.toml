@@ -7,6 +7,7 @@ dependencies = [
   "fastapi",
   "numpy",
   "pillow",
+  "psycopg[binary]",
   "python-multipart",
   "uvicorn",
 ]
