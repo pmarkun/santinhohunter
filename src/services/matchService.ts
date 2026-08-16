@@ -6,6 +6,7 @@ import type { MatchedCandidate, Office, Uf } from '@/types/domain';
 
 type ApiMatchCandidate = {
   candidate_id: string;
+  election_year?: number;
   ballot_name: string;
   party: string;
   number: string;
@@ -73,7 +74,7 @@ function apiCandidateToCandidate(candidate: ApiMatchCandidate, uf: Uf): MatchedC
     ...mapApiCandidate(
       {
         candidate_id: candidate.candidate_id,
-        election_year: 2024,
+        election_year: candidate.election_year ?? 2026,
         uf,
         office: candidate.office,
         number: candidate.number,

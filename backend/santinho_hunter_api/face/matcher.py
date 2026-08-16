@@ -49,6 +49,7 @@ def rank_matches(
     return [
         MatchCandidate(
             candidate_id=candidate.candidate_id,
+            election_year=candidate.election_year,
             ballot_name=candidate.ballot_name,
             party=candidate.party,
             number=candidate.number,
