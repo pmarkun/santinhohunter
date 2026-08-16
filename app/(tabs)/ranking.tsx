@@ -14,7 +14,7 @@ import { radii, spacing } from '@/theme/layout';
 import type { Office, RankingEntry, Uf } from '@/types/domain';
 
 export default function RankingScreen() {
-  const [office, setOffice] = useState<Office>('councilor');
+  const [office, setOffice] = useState<Office>('federal_deputy');
   const [uf, setUf] = useState<Uf>('SP');
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
 
@@ -45,6 +45,13 @@ export default function RankingScreen() {
       <View>
         <Text style={styles.kicker}>Ranking público / {uf}</Text>
         <Text style={styles.title}>A pilha da sujeira</Text>
+      </View>
+
+      <View style={styles.notice}>
+        <Text style={styles.noticeText}>
+          Base 2026 em atualização pelo TSE. Enquanto a importação completa não fecha,
+          resultados podem aparecer parciais.
+        </Text>
       </View>
 
       <View style={styles.tabs}>
@@ -119,5 +126,18 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: spacing.md,
+  },
+  notice: {
+    backgroundColor: colors.card,
+    borderColor: colors.alert,
+    borderRadius: radii.sm,
+    borderWidth: 2,
+    padding: spacing.md,
+  },
+  noticeText: {
+    color: colors.asphalt,
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 20,
   },
 });

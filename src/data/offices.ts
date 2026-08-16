@@ -18,5 +18,4 @@ export const rankingOffices: Office[] = [
   'senator',
   'federal_deputy',
   'state_deputy',
-  'councilor',
 ];

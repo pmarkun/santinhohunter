@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -24,7 +24,7 @@ export default function HuntScreen() {
     async function loadLatest() {
       const storedUf = await getStoredUf();
       await syncPendingCaptures();
-      const entries = await fetchPublicRanking({ uf: storedUf, office: 'councilor' });
+      const entries = await fetchPublicRanking({ uf: storedUf, office: 'federal_deputy' });
       if (active) {
         setUf(storedUf);
         setLatestSantinhos(entries.slice(0, 3));
@@ -51,6 +51,10 @@ export default function HuntScreen() {
         </Text>
         <Text style={styles.body}>
           Junte-se aos Caçadores de Santinhos e ajude a denunciar!
+        </Text>
+        <Text style={styles.notice}>
+          Base 2026 em atualização. O ranking público pode começar parcial enquanto os
+          registros do TSE são importados.
         </Text>
       </View>
 
@@ -100,7 +104,7 @@ export default function HuntScreen() {
 
       <Pressable
         accessibilityRole="button"
-        onPress={() => router.push('/(tabs)/settings')}
+        onPress={() => router.push('/sobre' as Href)}
         style={({ pressed }) => [styles.aboutButton, pressed && styles.pressed]}
       >
         <Text style={styles.aboutText}>sobre o projeto</Text>
@@ -138,6 +142,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     lineHeight: 27,
+  },
+  notice: {
+    backgroundColor: colors.alert,
+    borderRadius: radii.sm,
+    color: colors.asphalt,
+    fontSize: 14,
+    fontWeight: '900',
+    lineHeight: 20,
+    padding: spacing.md,
+    textTransform: 'uppercase',
   },
   latest: {
     gap: spacing.lg,

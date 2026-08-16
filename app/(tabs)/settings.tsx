@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { type Href, router } from 'expo-router';
 
 import { AppScreen } from '@/components/AppScreen';
 import { getStoredUf, saveStoredUf, ufs } from '@/services/ufService';
@@ -65,6 +66,13 @@ export default function SettingsScreen() {
           Paulo 2024. Depois entra a importação do TSE para a eleição geral de 2026.
         </Text>
       </View>
+
+      <View style={styles.linkList}>
+        <LinkButton label="Sobre o projeto" route={'/sobre' as Href} />
+        <LinkButton label="Política de privacidade" route={'/politica-de-privacidade' as Href} />
+        <LinkButton label="Termos de uso" route={'/termos-de-uso' as Href} />
+        <LinkButton label="Exclusão de dados" route={'/exclusao-de-dados' as Href} />
+      </View>
     </AppScreen>
   );
 }
@@ -129,4 +137,32 @@ const styles = StyleSheet.create({
   ufTextActive: {
     color: colors.asphalt,
   },
+  linkList: {
+    gap: spacing.sm,
+  },
+  linkButton: {
+    alignItems: 'center',
+    borderColor: colors.line,
+    borderRadius: 6,
+    borderWidth: 1,
+    padding: spacing.md,
+  },
+  linkText: {
+    color: colors.asphalt,
+    fontSize: 14,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
 });
+
+function LinkButton({ label, route }: { label: string; route: Href }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push(route)}
+      style={({ pressed }) => [styles.linkButton, pressed && { opacity: 0.72 }]}
+    >
+      <Text style={styles.linkText}>{label}</Text>
+    </Pressable>
+  );
+}
