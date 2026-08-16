@@ -11,7 +11,10 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SANTINHO_API_BASE_URL": "https://santinho-api-production.up.railway.app"
+      }
     }
   }
 }

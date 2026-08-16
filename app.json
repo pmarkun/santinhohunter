@@ -3,10 +3,20 @@
     "name": "Santinho Hunter",
     "slug": "santinhohunter",
     "version": "0.1.0",
+    "description": "Cace, registre e conte santinhos eleitorais jogados nas ruas.",
     "orientation": "portrait",
     "scheme": "santinhohunter",
-    "userInterfaceStyle": "dark",
-    "assetBundlePatterns": ["**/*"],
+    "userInterfaceStyle": "light",
+    "privacy": "public",
+    "icon": "./assets/icon.png",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FBF4E3"
+    },
     "plugins": [
       "expo-router",
       [
@@ -18,12 +28,31 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Santinho Hunter usa localizacao para registrar onde o santinho foi encontrado."
+          "locationWhenInUsePermission": "Santinho Hunter usa localizacao aproximada para registrar onde o santinho foi encontrado."
         }
       ]
     ],
     "android": {
-      "package": "br.com.santinhohunter.app"
+      "package": "br.com.santinhohunter.app",
+      "versionCode": 2,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.INTERNET"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.VIBRATE"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FBF4E3"
+      },
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=br.com.santinhohunter.app"
     },
     "web": {
       "bundler": "metro",
@@ -31,6 +60,13 @@
     },
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8994a835-c29d-4755-9d16-761eb2c18eb3"
+      }
+    },
+    "owner": "pmarkun"
   }
 }
