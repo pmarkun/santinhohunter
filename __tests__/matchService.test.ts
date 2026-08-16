@@ -1,5 +1,19 @@
 import { matchSantinhoPhoto } from '@/services/matchService';
 
+jest.mock('expo-file-system', () => ({
+  File: class MockFile {
+    uri: string;
+
+    constructor(uri: string) {
+      this.uri = uri;
+    }
+
+    async bytes() {
+      return new Uint8Array([1, 2, 3]);
+    }
+  },
+}));
+
 describe('matchService', () => {
   const originalFetch = global.fetch;
 
@@ -39,6 +53,12 @@ describe('matchService', () => {
       'https://api.example.test/matches?uf=SP&office=councilor',
       expect.objectContaining({ method: 'POST' }),
     );
+    const [, request] = fetchMock.mock.calls[0];
+    const body = request.body as FormData;
+    const uploadedFile = body.get('file');
+
+    expect(uploadedFile).toBeInstanceOf(Blob);
+    expect(uploadedFile).not.toHaveProperty('uri');
     expect(matches[0]).toEqual({
       id: '250002052120',
       electionYear: 2024,

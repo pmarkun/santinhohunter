@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 import { apiCandidateToCandidate as mapApiCandidate } from '@/services/apiCandidate';
@@ -62,11 +63,10 @@ async function appendPhoto(body: FormData, photoUri: string): Promise<void> {
     return;
   }
 
-  body.append('file', {
-    name: 'santinho.jpg',
-    type: 'image/jpeg',
-    uri: photoUri,
-  } as unknown as Blob);
+  const file = new File(photoUri);
+  const bytes = await file.bytes();
+  const blob = new Blob([bytes], { type: 'image/jpeg' });
+  body.append('file', blob, 'santinho.jpg');
 }
 
 function apiCandidateToCandidate(candidate: ApiMatchCandidate, uf: Uf): MatchedCandidate {

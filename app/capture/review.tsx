@@ -71,7 +71,10 @@ export default function CaptureReviewScreen() {
         setMatchError('Não achei candidato nessa foto. Dá para buscar pelo número.');
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'O detector tropeçou agora.';
+      const message =
+        err instanceof Error && !err.message.includes('Unsupported FormDataPart')
+          ? err.message
+          : 'Não consegui enviar essa foto para análise. Tente tirar outra ou busque pelo número.';
       setMatchError(message);
     } finally {
       setMatching(false);
