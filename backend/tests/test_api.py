@@ -188,3 +188,62 @@ def test_candidate_search_by_number(tmp_path: Path) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["candidates"][0]["id"] == "sp-governor-10"
+
+
+def test_candidate_search_uses_catalog_when_available(tmp_path: Path) -> None:
+    catalog_path = tmp_path / "candidates.json"
+    catalog_path.write_text(
+        """
+{
+  "metadata": {"source": "test"},
+  "candidates": [
+    {
+      "id": "250002530092",
+      "election_year": 2026,
+      "uf": "SP",
+      "office": "federal_deputy",
+      "number": "3016",
+      "ballot_name": "PROF. FRED DALLY",
+      "full_name": "Fredson Santos Dally",
+      "party": "NOVO",
+      "photo_url": null
+    }
+  ]
+}
+""",
+        encoding="utf-8",
+    )
+    client = TestClient(
+        create_app(
+            Settings(
+                embeddings_path=Path("backend/data/candidate_embeddings.sample.json"),
+                database_url=f"sqlite:///{tmp_path / 'captures.sqlite3'}",
+                face_model="ArcFace",
+                face_detector="retinaface",
+                face_device="auto",
+                location_precision_decimals=3,
+                match_limit=5,
+                max_upload_bytes=7000000,
+                cors_origins=["*"],
+                candidate_catalog_path=catalog_path,
+            )
+        )
+    )
+
+    response = client.get("/candidates/search?uf=SP&number=3016&office=federal_deputy")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["candidates"] == [
+        {
+            "id": "250002530092",
+            "election_year": 2026,
+            "uf": "SP",
+            "office": "federal_deputy",
+            "number": "3016",
+            "ballot_name": "PROF. FRED DALLY",
+            "full_name": "Fredson Santos Dally",
+            "party": "NOVO",
+            "photo_url": None,
+        }
+    ]

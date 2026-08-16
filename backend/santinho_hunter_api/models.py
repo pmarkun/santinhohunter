@@ -98,6 +98,7 @@ class EmbeddingMatchRequest(BaseModel):
 
 class MatchCandidate(BaseModel):
     candidate_id: str
+    election_year: int
     ballot_name: str
     party: str
     number: str

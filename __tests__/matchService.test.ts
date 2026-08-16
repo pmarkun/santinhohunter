@@ -16,6 +16,7 @@ describe('matchService', () => {
         matches: [
           {
             candidate_id: '250002052120',
+            election_year: 2024,
             ballot_name: 'PEDRO DA IA',
             party: 'REDE',
             number: '18888',

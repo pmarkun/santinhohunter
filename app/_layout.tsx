@@ -23,6 +23,13 @@ export default function RootLayout() {
           <Stack.Screen name="capture/camera" options={{ title: 'Caçar santinho' }} />
           <Stack.Screen name="capture/review" options={{ title: 'Conferir flagra' }} />
           <Stack.Screen name="capture/manual-search" options={{ title: 'Buscar por número' }} />
+          <Stack.Screen name="sobre" options={{ title: 'Sobre o projeto' }} />
+          <Stack.Screen
+            name="politica-de-privacidade"
+            options={{ title: 'Política de privacidade' }}
+          />
+          <Stack.Screen name="termos-de-uso" options={{ title: 'Termos de uso' }} />
+          <Stack.Screen name="exclusao-de-dados" options={{ title: 'Exclusão de dados' }} />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

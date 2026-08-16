@@ -1,0 +1,10 @@
+fastapi
+httpx
+numpy
+pillow
+psycopg[binary]
+python-multipart
+uvicorn
+deepface>=0.0.93
+tensorflow[and-cuda]>=2.17,<2.18
+tf-keras>=2.17,<2.18

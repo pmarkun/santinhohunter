@@ -14,6 +14,7 @@ class Settings:
     match_limit: int
     max_upload_bytes: int
     cors_origins: list[str]
+    candidate_catalog_path: Path | None = None
 
 
 def get_settings() -> Settings:
@@ -24,6 +25,9 @@ def get_settings() -> Settings:
                 "backend/data/candidate_embeddings.sample.json",
             )
         ),
+        candidate_catalog_path=Path(os.environ["SANTINHO_CANDIDATES_PATH"])
+        if os.getenv("SANTINHO_CANDIDATES_PATH")
+        else Path("backend/data/candidates.tse-2026.json"),
         database_url=os.getenv(
             "DATABASE_URL",
             "sqlite:///backend/data/santinhohunter.local.sqlite3",
