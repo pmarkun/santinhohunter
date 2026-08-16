@@ -23,6 +23,7 @@ export default function RootLayout() {
           <Stack.Screen name="capture/camera" options={{ headerShown: false }} />
           <Stack.Screen name="capture/review" options={{ headerShown: false }} />
           <Stack.Screen name="capture/manual-search" options={{ headerShown: false }} />
+          <Stack.Screen name="capture/success" options={{ headerShown: false }} />
           <Stack.Screen name="sobre" options={{ title: 'Sobre o projeto' }} />
           <Stack.Screen
             name="politica-de-privacidade"

@@ -1,181 +1,218 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
-import { AppScreen } from '@/components/AppScreen';
-import { CandidateCard } from '@/components/CandidateCard';
-import { EmptyState } from '@/components/EmptyState';
-import { PrimaryActionButton } from '@/components/PrimaryActionButton';
+import { CandidateResultRow } from '@/components/CandidateResultRow';
+import { FlowTopBar } from '@/components/FlowTopBar';
+import { MobileScreen } from '@/components/MobileScreen';
 import { officeLabels, rankingOffices } from '@/data/offices';
 import { searchCandidatesByNumberFromApi } from '@/services/candidateService';
-import { confirmLatestCaptureCandidate } from '@/services/captureStorage';
-import { syncCapture } from '@/services/syncService';
+import { getCaptureDraft, selectCaptureDraftCandidate } from '@/services/captureDraft';
 import { getStoredUf } from '@/services/ufService';
 import { colors } from '@/theme/colors';
-import { radii, spacing } from '@/theme/layout';
+import { spacing } from '@/theme/layout';
+import { fontFamilies } from '@/theme/typography';
 import type { Candidate, Office, Uf } from '@/types/domain';
 
 export default function ManualSearchScreen() {
+  const draft = getCaptureDraft();
   const [number, setNumber] = useState('');
-  const [office, setOffice] = useState<Office | undefined>(undefined);
-  const [uf, setUf] = useState<Uf>('SP');
+  const [office, setOffice] = useState<Office | undefined>();
+  const [uf, setUf] = useState<Uf>(draft?.location.uf ?? 'SP');
   const [results, setResults] = useState<Candidate[]>([]);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
-    getStoredUf().then(setUf);
-  }, []);
+    if (!draft) {
+      getStoredUf().then(setUf);
+    }
+  }, [draft]);
 
   useEffect(() => {
     let active = true;
+    const timer = setTimeout(async () => {
+      const query = number.replace(/\D/g, '');
+      if (!query) {
+        setResults([]);
+        setSearching(false);
+        return;
+      }
 
-    searchCandidatesByNumberFromApi({
-      uf,
-      number,
-      ...(office ? { office } : {}),
-    }).then((candidates) => {
+      setSearching(true);
+      const candidates = await searchCandidatesByNumberFromApi({
+        uf,
+        number: query,
+        ...(office ? { office } : {}),
+      });
       if (active) {
         setResults(candidates);
+        setSearching(false);
       }
-    });
+    }, 250);
 
     return () => {
       active = false;
+      clearTimeout(timer);
     };
   }, [number, office, uf]);
 
-  async function confirmCandidate(
-    candidateId: string,
-    candidateNumber: string,
-    candidateOffice: Office,
-  ) {
-    const confirmed = await confirmLatestCaptureCandidate({
-      candidateId,
-      candidateNumber,
-      office: candidateOffice,
-    });
-    if (confirmed) {
-      await syncCapture(confirmed);
+  function chooseCandidate(candidate: Candidate) {
+    if (!selectCaptureDraftCandidate(candidate, 'manual_selection')) {
+      router.replace('/capture/camera');
+      return;
     }
-    router.replace('/(tabs)/history');
+    router.back();
   }
 
   return (
-    <AppScreen>
-      <View>
-        <Text style={styles.kicker}>Não bateu?</Text>
-        <Text style={styles.title}>Busca pelo número</Text>
+    <MobileScreen top={<FlowTopBar onBack={() => router.back()} title="Buscar por número" />}>
+      <View style={styles.searchBlock}>
+        <Text style={styles.title}>Qual número está no santinho?</Text>
+        <TextInput
+          accessibilityLabel="Número do candidato"
+          autoFocus
+          inputMode="numeric"
+          keyboardType="number-pad"
+          onChangeText={setNumber}
+          placeholder="13, 5050, 13131..."
+          placeholderTextColor={colors.muted}
+          style={styles.input}
+          value={number}
+        />
       </View>
 
-      <TextInput
-        accessibilityLabel="Numero do candidato"
-        inputMode="numeric"
-        keyboardType="number-pad"
-        onChangeText={setNumber}
-        placeholder="13, 5050, 13131..."
-        placeholderTextColor={colors.muted}
-        style={styles.input}
-        value={number}
-      />
-
-      <View style={styles.tabs}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => setOffice(undefined)}
-          style={[styles.tab, !office && styles.activeTab]}
-        >
-          <Text style={[styles.tabText, !office && styles.activeTabText]}>Todos</Text>
-        </Pressable>
+      <ScrollView
+        contentContainerStyle={styles.officeContent}
+        horizontal
+        keyboardShouldPersistTaps="handled"
+        showsHorizontalScrollIndicator={false}
+        style={styles.officeScroll}
+      >
+        <OfficeButton active={!office} label="Todos" onPress={() => setOffice(undefined)} />
         {rankingOffices.map((item) => (
-          <Pressable
-            accessibilityRole="button"
+          <OfficeButton
+            active={office === item}
             key={item}
+            label={officeLabels[item]}
             onPress={() => setOffice(item)}
-            style={[styles.tab, office === item && styles.activeTab]}
-          >
-            <Text style={[styles.tabText, office === item && styles.activeTabText]}>
-              {officeLabels[item]}
-            </Text>
-          </Pressable>
+          />
         ))}
-      </View>
+      </ScrollView>
 
-      <View style={styles.results}>
-        {results.length === 0 ? (
-          <EmptyState body="Digite o número que aparece no santinho." title="Sem candidato ainda" />
-        ) : (
-          results.map((candidate) => (
-            <Pressable
-              accessibilityRole="button"
-              key={candidate.id}
-              onPress={() =>
-                confirmCandidate(candidate.id, candidate.number, candidate.office)
-              }
-            >
-              <CandidateCard candidate={candidate} />
-            </Pressable>
-          ))
+      <FlatList
+        contentContainerStyle={results.length === 0 ? styles.emptyList : styles.resultList}
+        data={results}
+        keyboardShouldPersistTaps="handled"
+        keyExtractor={(candidate) => candidate.id}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>
+            {searching
+              ? 'Procurando na base do TSE...'
+              : number
+                ? 'Nenhum candidato com esse número e cargo.'
+                : 'Digite o número para procurar.'}
+          </Text>
+        }
+        renderItem={({ item }) => (
+          <Pressable accessibilityRole="button" onPress={() => chooseCandidate(item)}>
+            <CandidateResultRow candidate={item} />
+          </Pressable>
         )}
-      </View>
-
-      <PrimaryActionButton
-        label="Voltar para a caça"
-        onPress={() => router.replace('/(tabs)/hunt')}
-        variant="paper"
+        style={styles.list}
       />
-    </AppScreen>
+    </MobileScreen>
+  );
+}
+
+function OfficeButton(props: { active: boolean; label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={props.onPress}
+      style={[styles.officeButton, props.active && styles.activeOfficeButton]}
+    >
+      <Text style={[styles.officeLabel, props.active && styles.activeOfficeLabel]}>
+        {props.label}
+      </Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  kicker: {
-    color: colors.red,
-    fontSize: 13,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+  searchBlock: {
+    gap: spacing.sm,
   },
   title: {
     color: colors.asphalt,
-    fontSize: 32,
+    fontFamily: fontFamilies.display,
+    fontSize: 26,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   input: {
-    backgroundColor: colors.card,
-    borderColor: colors.line,
-    borderRadius: radii.md,
-    borderWidth: 1,
+    borderBottomColor: colors.asphalt,
+    borderBottomWidth: 2,
     color: colors.asphalt,
-    fontSize: 28,
+    fontFamily: fontFamilies.display,
+    fontSize: 38,
     fontWeight: '900',
-    padding: spacing.lg,
-  },
-  tabs: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  tab: {
-    backgroundColor: colors.card,
-    borderColor: colors.line,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
+    minHeight: 62,
+    paddingHorizontal: 0,
     paddingVertical: spacing.sm,
   },
-  activeTab: {
-    backgroundColor: colors.alert,
-    borderColor: colors.alert,
+  officeScroll: {
+    flexGrow: 0,
+    marginHorizontal: -spacing.xl,
   },
-  tabText: {
+  officeContent: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+  },
+  officeButton: {
+    borderColor: colors.line,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: spacing.md,
+  },
+  activeOfficeButton: {
+    backgroundColor: colors.alert,
+    borderColor: colors.asphalt,
+  },
+  officeLabel: {
     color: colors.asphalt,
-    fontSize: 12,
+    fontFamily: fontFamilies.display,
+    fontSize: 14,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
-  activeTabText: {
+  activeOfficeLabel: {
     color: colors.asphalt,
   },
-  results: {
-    gap: spacing.md,
+  list: {
+    flex: 1,
+    marginHorizontal: -spacing.xl,
+  },
+  resultList: {
+    paddingHorizontal: spacing.xl,
+  },
+  emptyList: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  emptyText: {
+    color: colors.muted,
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });
