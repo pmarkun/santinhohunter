@@ -2,7 +2,7 @@ FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
-ENV SANTINHO_EMBEDDINGS_PATH=data/candidate_embeddings.pedro-marina.json
+ENV SANTINHO_EMBEDDINGS_PATH=data/candidate_embeddings.tse-2026.json
 ENV SANTINHO_CANDIDATES_PATH=data/candidates.tse-2026.json
 
 WORKDIR /app
