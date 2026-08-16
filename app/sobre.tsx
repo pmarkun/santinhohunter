@@ -18,7 +18,7 @@ export default function AboutProjectScreen() {
         {
           title: 'Fontes de dados',
           body:
-            'A base de candidatos deve vir dos Dados Abertos do TSE e do DivulgaCandContas. Enquanto a importação completa da Eleição Geral de 2026 não estiver validada, o app informa quando estiver usando base parcial de teste.',
+            'A base inicial usa o snapshot oficial de candidaturas 2026 do TSE para São Paulo e Presidência. A busca manual já usa esse catálogo; o reconhecimento facial é ampliado conforme os embeddings das fotos oficiais são gerados.',
         },
         {
           title: 'Independência',

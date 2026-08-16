@@ -11,14 +11,16 @@ Este repo usa dois servicos Railway apontando para o mesmo repositorio.
 - Banco: Postgres Railway, criado com `railway add --database postgres`
 - Variaveis:
   - `DATABASE_URL=${{Postgres.DATABASE_URL}}`
+  - `SANTINHO_CANDIDATES_PATH=data/candidates.tse-2026.json`
   - `SANTINHO_EMBEDDINGS_PATH=data/candidate_embeddings.pedro-marina.json`
   - `SANTINHO_CORS_ORIGINS=https://seu-pwa.up.railway.app`
   - `SANTINHO_FACE_DEVICE=auto`
   - `SANTINHO_FACE_MODEL=ArcFace`
   - `SANTINHO_FACE_DETECTOR=retinaface`
 
-O fixture versionado tem apenas Pedro da IA e Marina Bragante para validar o match.
-A base grande deve entrar depois por volume, bucket ou artefato gerado em pipeline.
+O catalogo versionado `backend/data/candidates.tse-2026.json` alimenta busca
+manual e ranking com o snapshot TSE 2026 de SP + Presidência. O arquivo de
+embeddings ainda pode ser parcial enquanto a geração facial completa não roda.
 
 ## PWA
 

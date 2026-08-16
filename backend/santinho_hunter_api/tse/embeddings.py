@@ -28,7 +28,7 @@ def office_from_tse_label(label: str) -> Office:
     return OFFICE_BY_TSE_LABEL[normalized]
 
 
-def convert_tse_embedding_jsonl(input_path: Path, output_path: Path) -> int:
+def convert_tse_embedding_jsonl(input_path: Path, output_path: Path, election_year: int = 2026) -> int:
     embeddings: list[CandidateEmbedding] = []
 
     with input_path.open("r", encoding="utf-8") as file:
@@ -38,7 +38,7 @@ def convert_tse_embedding_jsonl(input_path: Path, output_path: Path) -> int:
             embeddings.append(
                 CandidateEmbedding(
                     candidate_id=row["candidate_sequence"],
-                    election_year=2024,
+                    election_year=int(row.get("election_year", election_year)),
                     uf=candidate["uf"],
                     office=office_from_tse_label(candidate["office_label"]),
                     number=candidate["number"],

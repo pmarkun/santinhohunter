@@ -32,13 +32,13 @@ def test_convert_tse_embedding_jsonl_writes_api_format(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    count = convert_tse_embedding_jsonl(input_path, output_path)
+    count = convert_tse_embedding_jsonl(input_path, output_path, election_year=2026)
     records = json.loads(output_path.read_text(encoding="utf-8"))
 
     assert count == 1
     assert records[0] == {
         "candidate_id": "250002052120",
-        "election_year": 2024,
+        "election_year": 2026,
         "uf": "SP",
         "office": "councilor",
         "number": "18888",

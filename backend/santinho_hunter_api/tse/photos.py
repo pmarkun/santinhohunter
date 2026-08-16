@@ -63,28 +63,47 @@ def iter_photo_entries(zip_path: Path) -> Iterable[TSEPhotoEntry]:
 
 
 def load_candidate_csv(csv_path: Path) -> dict[str, dict[str, str]]:
+    if csv_path.suffix.lower() == ".zip":
+        return load_candidate_zip(csv_path)
+
     with csv_path.open("r", encoding="latin-1", newline="") as file:
         sample = file.read(4096)
         file.seek(0)
         delimiter = ";" if sample.count(";") >= sample.count(",") else ","
-        reader = csv.DictReader(file, delimiter=delimiter)
+        return candidate_rows_by_sequence(csv.DictReader(file, delimiter=delimiter))
 
-        candidates: dict[str, dict[str, str]] = {}
-        for row in reader:
-            sequence = row.get("SQ_CANDIDATO")
 
-            if not sequence:
+def load_candidate_zip(zip_path: Path) -> dict[str, dict[str, str]]:
+    candidates: dict[str, dict[str, str]] = {}
+    with ZipFile(zip_path) as archive:
+        for member in archive.namelist():
+            if not member.endswith(".csv") or not Path(member).name.startswith("consulta_cand_"):
                 continue
 
-            candidates[sequence] = {
-                "candidate_sequence": sequence,
-                "ballot_name": row.get("NM_URNA_CANDIDATO", ""),
-                "number": row.get("NR_CANDIDATO", ""),
-                "party": row.get("SG_PARTIDO", ""),
-                "office_label": row.get("DS_CARGO", ""),
-                "uf": row.get("SG_UF", ""),
-                "city": row.get("NM_UE", ""),
-            }
+            with archive.open(member) as raw:
+                text = raw.read().decode("latin-1").splitlines()
+                candidates.update(candidate_rows_by_sequence(csv.DictReader(text, delimiter=";")))
+
+    return candidates
+
+
+def candidate_rows_by_sequence(reader: Iterable[dict[str, str]]) -> dict[str, dict[str, str]]:
+    candidates: dict[str, dict[str, str]] = {}
+    for row in reader:
+        sequence = row.get("SQ_CANDIDATO")
+
+        if not sequence:
+            continue
+
+        candidates[sequence] = {
+            "candidate_sequence": sequence,
+            "ballot_name": row.get("NM_URNA_CANDIDATO", ""),
+            "number": row.get("NR_CANDIDATO", ""),
+            "party": row.get("SG_PARTIDO", ""),
+            "office_label": row.get("DS_CARGO", ""),
+            "uf": row.get("SG_UF", ""),
+            "city": row.get("NM_UE", ""),
+        }
 
     return candidates
 

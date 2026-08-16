@@ -49,8 +49,8 @@ export default function RankingScreen() {
 
       <View style={styles.notice}>
         <Text style={styles.noticeText}>
-          Base 2026 em atualização pelo TSE. Enquanto a importação completa não fecha,
-          resultados podem aparecer parciais.
+          Base TSE 2026 de SP carregada para busca manual e ranking. A contagem
+          depende das capturas confirmadas pelo app.
         </Text>
       </View>
 

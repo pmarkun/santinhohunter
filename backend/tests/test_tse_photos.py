@@ -53,3 +53,34 @@ def test_write_photo_manifest_can_join_candidate_csv(tmp_path: Path) -> None:
     assert count == 1
     assert record["candidate_sequence"] == "250002527932"
     assert record["candidate"]["ballot_name"] == "FULANA DA PRAÇA"
+
+
+def test_write_photo_manifest_can_join_candidate_zip(tmp_path: Path) -> None:
+    zip_path = tmp_path / "photos.zip"
+    candidate_zip_path = tmp_path / "consulta_cand_2026.zip"
+    output_path = tmp_path / "manifest.jsonl"
+
+    with ZipFile(zip_path, "w") as archive:
+        archive.writestr("FSP250002527932_div.jpg", b"photo")
+
+    with ZipFile(candidate_zip_path, "w") as archive:
+        archive.writestr(
+            "consulta_cand_2026_SP.csv",
+            "\n".join(
+                [
+                    "SQ_CANDIDATO;NM_URNA_CANDIDATO;NR_CANDIDATO;SG_PARTIDO;DS_CARGO;SG_UF;NM_UE",
+                    "250002527932;FULANA DA PRAÇA;12345;PAPEL;DEPUTADO FEDERAL;SP;SAO PAULO",
+                ]
+            ),
+        )
+
+    count = write_photo_manifest(
+        zip_path=zip_path,
+        candidate_csv_path=candidate_zip_path,
+        output_path=output_path,
+    )
+    record = json.loads(output_path.read_text(encoding="utf-8").strip())
+
+    assert count == 1
+    assert record["candidate_sequence"] == "250002527932"
+    assert record["candidate"]["office_label"] == "DEPUTADO FEDERAL"

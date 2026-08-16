@@ -24,7 +24,7 @@ from santinho_hunter_api.storage import CandidateEmbeddingStore
 
 def create_app(app_settings: Settings | None = None) -> FastAPI:
     settings = app_settings or get_settings()
-    store = CandidateEmbeddingStore(settings.embeddings_path)
+    store = CandidateEmbeddingStore(settings.embeddings_path, settings.candidate_catalog_path)
     capture_store = CaptureStore(settings.database_url, settings.location_precision_decimals)
     capture_store.ensure_schema()
     face_provider = DeepFaceProvider(
@@ -145,13 +145,13 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
         rows = capture_store.ranking(normalized_uf, office)
         entries = []
         for row in rows:
-            candidate = store.find(row.candidate_id)
+            candidate = store.find_response(row.candidate_id)
             if not candidate:
                 continue
 
             entries.append(
                 RankingEntryResponse(
-                    candidate=store.to_response(candidate),
+                    candidate=candidate,
                     count=row.count,
                     last_capture_at=row.last_capture_at,
                 )

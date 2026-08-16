@@ -39,11 +39,12 @@ Variáveis úteis:
 ## Fotos Do TSE
 
 Os zips de fotos do TSE sao grandes e nao devem ser extraidos dentro do repo.
-Gere um manifesto local ignorado pelo git:
+Gere o catalogo versionado de candidatos e manifestos locais de fotos:
 
 ```sh
-nix develop --command python scripts/import-tse-photo-zip.py ~/Downloads/foto_cand2024_SP_div.zip --output backend/data/tse/2024/SP/photo_manifest.jsonl
+nix develop --command python scripts/import-tse-candidates.py --ufs SP
 ```
 
-Quando o CSV de candidaturas (`consulta_cand`) estiver disponivel, passe `--candidate-csv`
-para enriquecer cada foto pelo `SQ_CANDIDATO`.
+O catalogo compacto fica em `backend/data/candidates.tse-2026.json` e entra no
+deploy. Zips e manifestos de fotos ficam em `backend/data/tse/` e seguem fora do
+Git.

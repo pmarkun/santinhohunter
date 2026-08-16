@@ -62,8 +62,9 @@ export default function SettingsScreen() {
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>Sobre os dados</Text>
         <Text style={styles.panelBody}>
-          A base pública atual é fixture de teste com Pedro da IA e Marina Bragante em São
-          Paulo 2024. Depois entra a importação do TSE para a eleição geral de 2026.
+          A busca manual usa o snapshot oficial de candidaturas 2026 do TSE para São
+          Paulo e Presidência. O reconhecimento facial ainda depende da geração dos
+          embeddings das fotos oficiais.
         </Text>
       </View>
 

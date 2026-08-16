@@ -53,8 +53,8 @@ export default function HuntScreen() {
           Junte-se aos Caçadores de Santinhos e ajude a denunciar!
         </Text>
         <Text style={styles.notice}>
-          Base 2026 em atualização. O ranking público pode começar parcial enquanto os
-          registros do TSE são importados.
+          Base TSE 2026 de SP carregada para busca manual. O match facial ainda
+          cresce conforme os embeddings das fotos oficiais são gerados.
         </Text>
       </View>
 

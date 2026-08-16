@@ -18,12 +18,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("input", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--year", type=int, default=2026)
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    count = convert_tse_embedding_jsonl(args.input, args.output)
+    count = convert_tse_embedding_jsonl(args.input, args.output, election_year=args.year)
     print(f"Wrote {count} API candidate embeddings to {args.output}")
 
 
