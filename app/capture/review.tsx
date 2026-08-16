@@ -187,6 +187,9 @@ export default function CaptureReviewScreen() {
           ? { confidence: selection.confidence }
           : {}),
       })),
+      identifiedCandidateSnapshots: confirmedSelections.map(
+        (selection) => selection.candidate,
+      ),
       office: primary.candidate.office,
       selectedCandidateId: primary.candidate.id,
       status: 'confirmed',

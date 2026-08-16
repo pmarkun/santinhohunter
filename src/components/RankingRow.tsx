@@ -1,7 +1,10 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
+import { officeLabels } from '@/data/offices';
 import { colors } from '@/theme/colors';
-import { radii, spacing } from '@/theme/layout';
+import { spacing } from '@/theme/layout';
+import { fontFamilies } from '@/theme/typography';
 import type { RankingEntry } from '@/types/domain';
 
 type RankingRowProps = {
@@ -13,15 +16,23 @@ export function RankingRow({ entry, position }: RankingRowProps) {
   return (
     <View style={styles.row}>
       <Text style={styles.position}>{position}</Text>
+      {entry.candidate.photoUrl ? (
+        <Image source={{ uri: entry.candidate.photoUrl }} style={styles.photo} />
+      ) : (
+        <View style={styles.photoFallback}>
+          <MaterialCommunityIcons color={colors.muted} name="account" size={31} />
+        </View>
+      )}
       <View style={styles.body}>
-        <Text style={styles.name}>{entry.candidate.ballotName}</Text>
-        <Text style={styles.meta}>
+        <Text numberOfLines={1} style={styles.name}>{entry.candidate.ballotName}</Text>
+        <Text numberOfLines={1} style={styles.meta}>
           {entry.candidate.number} / {entry.candidate.party}
         </Text>
+        <Text numberOfLines={1} style={styles.office}>{officeLabels[entry.candidate.office]}</Text>
       </View>
       <View style={styles.countBox}>
         <Text style={styles.count}>{entry.count}</Text>
-        <Text style={styles.countLabel}>lixos</Text>
+        <Text style={styles.countLabel}>santinhos</Text>
       </View>
     </View>
   );
@@ -30,50 +41,57 @@ export function RankingRow({ entry, position }: RankingRowProps) {
 const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
-    backgroundColor: colors.card,
-    borderColor: colors.line,
-    borderRadius: radii.sm,
-    borderWidth: 1,
+    borderBottomColor: colors.line,
+    borderBottomWidth: 1,
     flexDirection: 'row',
     gap: spacing.md,
-    padding: spacing.md,
+    minHeight: 108,
+    paddingVertical: spacing.md,
   },
   position: {
-    color: colors.red,
-    fontSize: 28,
+    color: colors.asphalt,
+    fontFamily: fontFamilies.display,
+    fontSize: 38,
     fontWeight: '900',
-    minWidth: 38,
+    minWidth: 28,
   },
-  body: {
-    flex: 1,
+  photo: { backgroundColor: '#EFEFEF', height: 76, width: 66 },
+  photoFallback: {
+    alignItems: 'center',
+    backgroundColor: '#EFEFEF',
+    height: 76,
+    justifyContent: 'center',
+    width: 66,
   },
+  body: { flex: 1 },
   name: {
     color: colors.asphalt,
-    fontSize: 17,
+    fontFamily: fontFamilies.display,
+    fontSize: 18,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
-  meta: {
-    color: colors.steel,
-    fontSize: 13,
-    fontWeight: '700',
+  meta: { color: colors.asphalt, fontSize: 12, fontWeight: '700' },
+  office: {
+    color: colors.muted,
+    fontFamily: fontFamilies.display,
+    fontSize: 12,
+    fontWeight: '900',
+    marginTop: 2,
+    textTransform: 'uppercase',
   },
-  countBox: {
-    alignItems: 'center',
-    backgroundColor: colors.alert,
-    borderRadius: radii.sm,
-    minWidth: 70,
-    padding: spacing.sm,
-  },
+  countBox: { alignItems: 'flex-end' },
   count: {
     color: colors.asphalt,
-    fontSize: 24,
+    fontFamily: fontFamilies.display,
+    fontSize: 34,
     fontWeight: '900',
-    lineHeight: 28,
+    lineHeight: 35,
   },
   countLabel: {
     color: colors.asphalt,
-    fontSize: 11,
+    fontFamily: fontFamilies.display,
+    fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',
   },

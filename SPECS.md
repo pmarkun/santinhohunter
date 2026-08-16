@@ -296,12 +296,12 @@ Fluxo:
 2. App abre camera.
 3. Pessoa fotografa o santinho.
 4. App captura localizacao e timestamp.
-5. App mostra pre-visualizacao.
-6. App roda identificacao.
-7. App exibe candidatos encontrados, se houver.
-8. Pessoa confirma candidato ou busca manualmente.
-9. App salva registro local e tenta sincronizar.
-10. App mostra confirmacao e opcao de ver ranking.
+5. App abre a revisao e roda a identificacao automaticamente.
+6. App exibe os candidatos encontrados, se houver.
+7. Quando houver mais de um rosto, a pessoa confirma cada envolvido em sequencia.
+8. Pessoa confirma os candidatos ou busca manualmente.
+9. App salva um unico registro local com todos os envolvidos e tenta sincronizar.
+10. App mostra confirmacao e opcoes de novo flagra ou ranking.
 
 Estados:
 
@@ -424,7 +424,20 @@ Tabs principais:
 - Cacar
 - Ranking
 - Historico
-- Ajustes
+
+Ajustes e politicas ficam em uma rota secundaria, acessivel pelo seletor de UF e
+por links contextuais, sem ocupar uma quarta tab da jornada diaria.
+
+### 12.1 Diretriz Mobile V2
+
+- A tela inicial, a camera, a identificacao e a confirmacao devem caber na area
+  util de um celular sem rolagem obrigatoria.
+- A acao primaria fica fixa e ao alcance do polegar.
+- A camera usa preview em tela cheia e controle de disparo circular.
+- A revisao executa o match automaticamente e mantem alternativas como busca
+  por numero e nova foto fora da acao primaria.
+- Ranking e historico usam listas nativas; somente o conteudo extenso rola.
+- Telas institucionais e ajustes podem rolar por serem jornadas secundarias.
 
 ## 13. Telas
 
@@ -436,9 +449,9 @@ Elementos:
 
 - Botao principal grande: "Cacar santinho"
 - UF atual com acao de troca.
-- Contador local ou estadual: "X lixos encontrados no seu estado"
+- Contador estadual baseado no ranking publico disponivel.
 - Atalho para ranking.
-- Ultimo flagrante, se existir.
+- Primeiro colocado do ranking, se existir.
 
 ### 13.2 Camera
 
@@ -455,7 +468,7 @@ Requisitos:
 - Abrir rapido.
 - Evitar UI poluida.
 - Lidar com permissao negada.
-- Confirmar foto antes de processar.
+- Seguir direto para revisao e processamento depois do disparo.
 
 ### 13.3 Review Da Foto
 
@@ -464,19 +477,21 @@ Elementos:
 - Foto capturada.
 - Data/hora.
 - Local aproximado.
-- Botao "Usar esse flagra".
+- Resultado de identificacao carregado automaticamente.
+- Marcadores para cada rosto detectado.
+- Botao "Confirmar e enviar".
 - Botao "Tirar outra".
 
 ### 13.4 Resultado De Match
 
 Elementos:
 
-- Lista de candidatos encontrados.
+- Um candidato provavel por rosto, confirmado em sequencia.
 - Confiança visual sem excesso tecnico.
 - Foto oficial do candidato.
 - Nome de urna, numero, partido e cargo.
-- Botao "E esse".
-- Botao "Nao achei, buscar por numero".
+- Botao "Confirmar" ou "Confirmar e enviar".
+- Botao "Nao e esse" e busca por numero.
 
 ### 13.5 Busca Manual
 
@@ -503,6 +518,7 @@ Elementos:
 
 - Grade ou lista de flagrantes.
 - Status de sync.
+- Todos os candidatos confirmados no mesmo material.
 - Filtros simples por candidato/cargo.
 
 ### 13.8 Ajustes

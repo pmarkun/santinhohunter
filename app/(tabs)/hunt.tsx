@@ -6,9 +6,10 @@ import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native
 import { CaptureAction } from '@/components/CaptureAction';
 import { CompactTopBar } from '@/components/CompactTopBar';
 import { MobileScreen } from '@/components/MobileScreen';
+import { UfPickerModal } from '@/components/UfPickerModal';
 import { fetchPublicRanking } from '@/services/rankingService';
 import { syncPendingCaptures } from '@/services/syncService';
-import { getStoredUf } from '@/services/ufService';
+import { getStoredUf, saveStoredUf } from '@/services/ufService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/layout';
 import { fontFamilies } from '@/theme/typography';
@@ -19,6 +20,7 @@ export default function HuntScreen() {
   const compact = height < 720;
   const [uf, setUf] = useState<Uf>('SP');
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
+  const [ufPickerVisible, setUfPickerVisible] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -48,17 +50,25 @@ export default function HuntScreen() {
     [ranking],
   );
 
+  async function selectUf(nextUf: Uf) {
+    setUfPickerVisible(false);
+    setUf(nextUf);
+    await saveStoredUf(nextUf);
+    setRanking(await fetchPublicRanking({ uf: nextUf, office: 'federal_deputy' }));
+  }
+
   return (
-    <MobileScreen
-      compact={compact}
-      top={
-        <CompactTopBar
-          onPressUf={() => router.push('/(tabs)/settings')}
-          title="Caçadores de Santinhos"
-          uf={uf}
-        />
-      }
-    >
+    <>
+      <MobileScreen
+        compact={compact}
+        top={
+          <CompactTopBar
+            onPressUf={() => setUfPickerVisible(true)}
+            title="Caçadores de Santinhos"
+            uf={uf}
+          />
+        }
+      >
       <View style={styles.intro}>
         <Text numberOfLines={2} style={[styles.title, compact && styles.compactTitle]}>
           Flagrar lixo eleitoral
@@ -114,7 +124,14 @@ export default function HuntScreen() {
           </View>
         )}
       </View>
-    </MobileScreen>
+      </MobileScreen>
+      <UfPickerModal
+        activeUf={uf}
+        onClose={() => setUfPickerVisible(false)}
+        onSelect={selectUf}
+        visible={ufPickerVisible}
+      />
+    </>
   );
 }
 

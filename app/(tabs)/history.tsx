@@ -1,121 +1,130 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppScreen } from '@/components/AppScreen';
-import { EmptyState } from '@/components/EmptyState';
+import { CompactTopBar } from '@/components/CompactTopBar';
 import { getStoredCaptures } from '@/services/captureStorage';
-import { syncPendingCaptures } from '@/services/syncService';
+import { syncCapture, syncPendingCaptures } from '@/services/syncService';
 import { colors } from '@/theme/colors';
-import { radii, spacing } from '@/theme/layout';
+import { spacing } from '@/theme/layout';
+import { fontFamilies } from '@/theme/typography';
 import type { SantinhoCapture } from '@/types/domain';
 
 export default function HistoryScreen() {
   const [captures, setCaptures] = useState<SantinhoCapture[]>([]);
 
+  const loadCaptures = useCallback(async () => {
+    await syncPendingCaptures();
+    setCaptures(await getStoredCaptures());
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-
-      syncPendingCaptures().then(() => getStoredCaptures()).then((items) => {
-        if (active) {
-          setCaptures(items);
-        }
-      });
-
-      return () => {
-        active = false;
-      };
-    }, []),
+      loadCaptures();
+    }, [loadCaptures]),
   );
+
+  async function retry(capture: SantinhoCapture) {
+    await syncCapture(capture);
+    setCaptures(await getStoredCaptures());
+  }
 
   return (
-    <AppScreen>
-      <View>
-        <Text style={styles.kicker}>Seus flagrantes</Text>
-        <Text style={styles.title}>Historico local</Text>
-      </View>
-
-      {captures.length === 0 ? (
-        <EmptyState
-          body="Quando voce capturar um santinho, ele aparece aqui com status de sincronizacao."
-          title="Nenhum flagra ainda"
-        />
-      ) : (
-        captures.map((capture) => (
-          <View key={capture.id} style={styles.item}>
-            <Image source={{ uri: capture.photoUri }} style={styles.image} />
-            <View style={styles.itemBody}>
-              <Text style={styles.itemTitle}>Santinho registrado</Text>
-              <Text style={styles.itemMeta}>{new Date(capture.capturedAt).toLocaleString()}</Text>
-              <Text style={styles.sync}>{syncStatusLabel(capture.syncStatus)}</Text>
-            </View>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
+      <CompactTopBar title="Meus flagrantes" />
+      <FlatList
+        contentContainerStyle={captures.length === 0 ? styles.emptyList : styles.list}
+        data={captures}
+        keyExtractor={(capture) => capture.id}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons color={colors.muted} name="camera-off-outline" size={44} />
+            <Text style={styles.emptyTitle}>Nenhum flagra ainda</Text>
+            <Text style={styles.emptyBody}>As evidências aparecem aqui assim que você fotografa.</Text>
           </View>
-        ))
-      )}
-    </AppScreen>
+        }
+        renderItem={({ item }) => <HistoryRow capture={item} onRetry={() => retry(item)} />}
+      />
+    </SafeAreaView>
   );
+}
+
+function HistoryRow({ capture, onRetry }: { capture: SantinhoCapture; onRetry: () => void }) {
+  const candidates = capture.identifiedCandidateSnapshots ?? [];
+  const title =
+    candidates.length === 1
+      ? candidates[0]?.ballotName
+      : candidates.length > 1
+        ? `${candidates.length} envolvidos identificados`
+        : 'Santinho registrado';
+  const status = syncStatus(capture.syncStatus);
+
+  return (
+    <View style={styles.row}>
+      <Image source={{ uri: capture.photoUri }} style={styles.photo} />
+      <View style={styles.body}>
+        <Text numberOfLines={1} style={styles.name}>{title}</Text>
+        <Text numberOfLines={1} style={styles.meta}>
+          {capture.city ?? capture.uf} · {new Date(capture.capturedAt).toLocaleString()}
+        </Text>
+        <View style={styles.statusRow}>
+          <MaterialCommunityIcons color={status.color} name={status.icon} size={17} />
+          <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+        </View>
+      </View>
+      {capture.syncStatus === 'sync_failed' ? (
+        <Pressable accessibilityLabel="Tentar enviar novamente" accessibilityRole="button" onPress={onRetry} style={styles.retry}>
+          <MaterialCommunityIcons color={colors.asphalt} name="refresh" size={23} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function syncStatus(status: SantinhoCapture['syncStatus']): {
+  color: string;
+  icon: 'cellphone' | 'clock-outline' | 'cloud-upload-outline' | 'cloud-check-outline' | 'alert-circle-outline';
+  label: string;
+} {
+  const states = {
+    local_only: { color: colors.muted, icon: 'cellphone' as const, label: 'No aparelho' },
+    pending_sync: { color: colors.muted, icon: 'clock-outline' as const, label: 'Pendente' },
+    syncing: { color: colors.ink, icon: 'cloud-upload-outline' as const, label: 'Enviando' },
+    synced: { color: colors.green, icon: 'cloud-check-outline' as const, label: 'Sincronizado' },
+    sync_failed: { color: colors.red, icon: 'alert-circle-outline' as const, label: 'Falhou · tente novamente' },
+  };
+  return states[status];
 }
 
 const styles = StyleSheet.create({
-  kicker: {
-    color: colors.red,
-    fontSize: 13,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: colors.asphalt,
-    fontSize: 32,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  item: {
-    backgroundColor: colors.card,
-    borderColor: colors.line,
-    borderRadius: radii.sm,
-    borderWidth: 1,
+  safeArea: { backgroundColor: colors.paper, flex: 1 },
+  list: { paddingHorizontal: spacing.lg },
+  row: {
+    alignItems: 'center',
+    borderBottomColor: colors.line,
+    borderBottomWidth: 1,
     flexDirection: 'row',
     gap: spacing.md,
-    padding: spacing.md,
+    minHeight: 108,
+    paddingVertical: spacing.md,
   },
-  image: {
-    backgroundColor: colors.newsprint,
-    borderRadius: radii.sm,
-    height: 84,
-    width: 84,
-  },
-  itemBody: {
-    flex: 1,
-  },
-  itemTitle: {
+  photo: { backgroundColor: '#EFEFEF', height: 82, width: 72 },
+  body: { flex: 1 },
+  name: {
     color: colors.asphalt,
-    fontSize: 17,
+    fontFamily: fontFamilies.display,
+    fontSize: 18,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
-  itemMeta: {
-    color: colors.steel,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  sync: {
-    color: colors.red,
-    fontSize: 12,
-    fontWeight: '900',
-    marginTop: spacing.sm,
-    textTransform: 'uppercase',
-  },
+  meta: { color: colors.muted, fontSize: 12, fontWeight: '600', marginTop: 2 },
+  statusRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm },
+  statusText: { fontFamily: fontFamilies.display, fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
+  retry: { alignItems: 'center', borderColor: colors.asphalt, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
+  emptyList: { flexGrow: 1, padding: spacing.xl },
+  emptyState: { flex: 1, gap: spacing.md, justifyContent: 'center' },
+  emptyTitle: { color: colors.asphalt, fontFamily: fontFamilies.display, fontSize: 31, fontWeight: '900', textTransform: 'uppercase' },
+  emptyBody: { color: colors.muted, fontSize: 15, fontWeight: '600', lineHeight: 21 },
 });
-
-function syncStatusLabel(status: SantinhoCapture['syncStatus']): string {
-  const labels: Record<SantinhoCapture['syncStatus'], string> = {
-    local_only: 'local',
-    pending_sync: 'pendente',
-    syncing: 'sincronizando',
-    synced: 'sincronizado',
-    sync_failed: 'falhou',
-  };
-
-  return labels[status];
-}

@@ -109,6 +109,7 @@ export type SantinhoCapture = {
   city?: string;
   candidateMatches: CandidateMatch[];
   identifiedCandidates?: CaptureCandidateSelection[];
+  identifiedCandidateSnapshots?: Candidate[];
   selectedCandidateId?: string;
   manualCandidateNumber?: string;
   office?: Office;
