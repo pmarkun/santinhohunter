@@ -1,7 +1,9 @@
 from datetime import UTC, datetime
+from io import BytesIO
 
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from PIL import Image
 
 from santinho_hunter_api.capture_store import CaptureStore
 from santinho_hunter_api.config import Settings, get_settings
@@ -12,6 +14,8 @@ from santinho_hunter_api.models import (
     CaptureCreateRequest,
     CaptureCreateResponse,
     EmbeddingMatchRequest,
+    FaceBoundingBox,
+    FaceMatchGroup,
     HealthResponse,
     MatchResponse,
     Office,
@@ -94,16 +98,27 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
                 device=face_provider.status().device,
             )
 
-        matches = rank_matches(
-            face_embeddings[0].embedding,
-            store.all(),
-            uf=uf,
-            office=office,
-            limit=settings.match_limit,
-        )
+        image_size = _read_image_size(image_bytes)
+        faces = []
+        for index, face_embedding in enumerate(face_embeddings):
+            face_matches = rank_matches(
+                face_embedding.embedding,
+                store.all(),
+                uf=uf,
+                office=office,
+                limit=settings.match_limit,
+            )
+            faces.append(
+                FaceMatchGroup(
+                    face_id=f"face-{index}",
+                    bounding_box=_normalize_face_box(face_embedding.box, image_size),
+                    matches=face_matches,
+                )
+            )
 
         return MatchResponse(
-            matches=matches,
+            matches=faces[0].matches,
+            faces=faces,
             provider=face_provider.provider_name,
             model=settings.face_model,
             detector=settings.face_detector,
@@ -168,3 +183,31 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
 
 
 app = create_app()
+
+
+def _read_image_size(image_bytes: bytes) -> tuple[int, int] | None:
+    try:
+        with Image.open(BytesIO(image_bytes)) as image:
+            return image.size
+    except Exception:
+        return None
+
+
+def _normalize_face_box(
+    box: tuple[int, int, int, int] | None,
+    image_size: tuple[int, int] | None,
+) -> FaceBoundingBox | None:
+    if not box or not image_size:
+        return None
+
+    x, y, width, height = box
+    image_width, image_height = image_size
+    if image_width <= 0 or image_height <= 0:
+        return None
+
+    return FaceBoundingBox(
+        x=max(0, min(1, x / image_width)),
+        y=max(0, min(1, y / image_height)),
+        width=max(0, min(1, width / image_width)),
+        height=max(0, min(1, height / image_height)),
+    )

@@ -52,4 +52,38 @@ describe('syncService', () => {
     const captures = await getStoredCaptures();
     expect(captures[0]?.syncStatus).toBe('sync_failed');
   });
+
+  it('sends every identified candidate in the capture payload', async () => {
+    await saveCapture({
+      ...confirmedCapture,
+      identifiedCandidates: [
+        {
+          candidateId: '250002052120',
+          office: 'councilor',
+          faceId: 'face-0',
+          selectionType: 'face_vector',
+          confidence: 0.92,
+        },
+        {
+          candidateId: 'candidate-2',
+          office: 'councilor',
+          faceId: 'face-1',
+          selectionType: 'manual_selection',
+        },
+      ],
+    });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: jest.fn(async () => ({ id: 'server-id', sync_status: 'synced' })),
+    } as unknown as Response);
+
+    await syncPendingCaptures();
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const payload = JSON.parse(String(request.body)) as { selected_candidates: unknown[] };
+    expect(payload.selected_candidates).toEqual([
+      expect.objectContaining({ candidate_id: '250002052120', face_id: 'face-0' }),
+      expect.objectContaining({ candidate_id: 'candidate-2', face_id: 'face-1' }),
+    ]);
+  });
 });

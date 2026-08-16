@@ -53,4 +53,37 @@ describe('captureStorage', () => {
 
     await expect(getStoredCaptures()).resolves.toEqual([]);
   });
+
+  it('normalizes a legacy singular candidate as an identified candidate', async () => {
+    await AsyncStorage.setItem(
+      'santinhohunter:captures',
+      JSON.stringify([
+        {
+          ...capture,
+          status: 'confirmed',
+          selectedCandidateId: 'sp-state-13131',
+          office: 'state_deputy',
+          candidateMatches: [
+            {
+              candidateId: 'sp-state-13131',
+              confidence: 0.9,
+              matchType: 'face_vector',
+              rank: 1,
+            },
+          ],
+        },
+      ]),
+    );
+
+    const [stored] = await getStoredCaptures();
+
+    expect(stored?.identifiedCandidates).toEqual([
+      {
+        candidateId: 'sp-state-13131',
+        office: 'state_deputy',
+        selectionType: 'face_vector',
+        confidence: 0.9,
+      },
+    ]);
+  });
 });

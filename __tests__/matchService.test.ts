@@ -1,6 +1,6 @@
 import { File } from 'expo-file-system';
 
-import { matchSantinhoPhoto } from '@/services/matchService';
+import { matchSantinhoFaces, matchSantinhoPhoto } from '@/services/matchService';
 
 jest.mock('expo-file-system', () => ({
   File: jest.fn().mockImplementation((uri: string) => {
@@ -80,5 +80,46 @@ describe('matchService', () => {
         uf: 'SP',
       }),
     ).rejects.toThrow('Match falhou com status 503');
+  });
+
+  it('maps candidates grouped by detected face', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        matches: [],
+        faces: [
+          {
+            face_id: 'face-0',
+            bounding_box: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+            matches: [
+              {
+                candidate_id: 'candidate-1',
+                ballot_name: 'CANDIDATA UM',
+                party: 'ABC',
+                number: '1234',
+                office: 'federal_deputy',
+                distance: 0.1,
+                confidence: 0.9,
+              },
+            ],
+          },
+          { face_id: 'face-1', bounding_box: null, matches: [] },
+        ],
+      }),
+    });
+
+    const faces = await matchSantinhoFaces({
+      photoUri: 'file:///tmp/santinho.jpg',
+      uf: 'SP',
+    });
+
+    expect(faces).toHaveLength(2);
+    expect(faces[0]).toEqual(
+      expect.objectContaining({
+        faceId: 'face-0',
+        boundingBox: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+        matches: [expect.objectContaining({ id: 'candidate-1' })],
+      }),
+    );
   });
 });

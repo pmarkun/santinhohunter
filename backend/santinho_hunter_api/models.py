@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 Office = Literal[
@@ -107,8 +107,22 @@ class MatchCandidate(BaseModel):
     confidence: float
 
 
+class FaceBoundingBox(BaseModel):
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+    width: float = Field(ge=0, le=1)
+    height: float = Field(ge=0, le=1)
+
+
+class FaceMatchGroup(BaseModel):
+    face_id: str
+    bounding_box: FaceBoundingBox | None = None
+    matches: list[MatchCandidate]
+
+
 class MatchResponse(BaseModel):
     matches: list[MatchCandidate]
+    faces: list[FaceMatchGroup] = Field(default_factory=list)
     provider: str
     model: str | None = None
     detector: str | None = None
@@ -127,6 +141,14 @@ class CaptureMatchInput(BaseModel):
     rank: int = Field(ge=1)
 
 
+class CaptureCandidateSelectionInput(BaseModel):
+    candidate_id: str
+    office: Office
+    face_id: str | None = None
+    selection_type: CaptureMatchType
+    confidence: float | None = Field(default=None, ge=0, le=1)
+
+
 class CaptureCreateRequest(BaseModel):
     client_capture_id: str = Field(min_length=1)
     captured_at: datetime
@@ -135,8 +157,9 @@ class CaptureCreateRequest(BaseModel):
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     accuracy: float | None = Field(default=None, ge=0)
-    selected_candidate_id: str
-    office: Office
+    selected_candidate_id: str | None = None
+    office: Office | None = None
+    selected_candidates: list[CaptureCandidateSelectionInput] = Field(default_factory=list)
     candidate_matches: list[CaptureMatchInput] = Field(default_factory=list)
     status: CaptureStatus = "confirmed"
     source: CaptureSource = "app"
@@ -149,6 +172,16 @@ class CaptureCreateRequest(BaseModel):
             raise ValueError("UF deve ser estadual")
 
         return normalized
+
+    @model_validator(mode="after")
+    def validate_candidate_selection(self) -> Self:
+        has_legacy_selection = bool(self.selected_candidate_id and self.office)
+        if not has_legacy_selection and not self.selected_candidates:
+            raise ValueError("Captura deve ter ao menos um candidato selecionado")
+        if bool(self.selected_candidate_id) != bool(self.office):
+            raise ValueError("Candidato e cargo legados devem ser enviados juntos")
+
+        return self
 
 
 class CaptureCreateResponse(BaseModel):

@@ -69,11 +69,32 @@ export type MatchedCandidate = Candidate & {
   distance: number;
 };
 
+export type FaceBoundingBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+export type FaceMatchGroup = {
+  faceId: string;
+  boundingBox?: FaceBoundingBox;
+  matches: MatchedCandidate[];
+};
+
 export type CandidateMatch = {
   candidateId: string;
   confidence: number;
   matchType: 'face_vector' | 'number_search' | 'manual_selection' | 'ocr_number';
   rank: number;
+};
+
+export type CaptureCandidateSelection = {
+  candidateId: string;
+  office: Office;
+  faceId?: string;
+  selectionType: 'face_vector' | 'manual_selection';
+  confidence?: number;
 };
 
 export type SantinhoCapture = {
@@ -87,6 +108,7 @@ export type SantinhoCapture = {
   uf: Uf;
   city?: string;
   candidateMatches: CandidateMatch[];
+  identifiedCandidates?: CaptureCandidateSelection[];
   selectedCandidateId?: string;
   manualCandidateNumber?: string;
   office?: Office;
