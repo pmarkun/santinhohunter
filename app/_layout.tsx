@@ -9,7 +9,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <Stack
           screenOptions={{
             contentStyle: { backgroundColor: colors.newsprint },
@@ -20,9 +20,9 @@ export default function RootLayout() {
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="capture/camera" options={{ title: 'Caçar santinho' }} />
-          <Stack.Screen name="capture/review" options={{ title: 'Conferir flagra' }} />
-          <Stack.Screen name="capture/manual-search" options={{ title: 'Buscar por número' }} />
+          <Stack.Screen name="capture/camera" options={{ headerShown: false }} />
+          <Stack.Screen name="capture/review" options={{ headerShown: false }} />
+          <Stack.Screen name="capture/manual-search" options={{ headerShown: false }} />
           <Stack.Screen name="sobre" options={{ title: 'Sobre o projeto' }} />
           <Stack.Screen
             name="politica-de-privacidade"

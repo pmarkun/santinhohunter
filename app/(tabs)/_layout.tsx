@@ -14,8 +14,12 @@ export default function TabsLayout() {
           backgroundColor: colors.newsprint,
           borderTopColor: colors.line,
           borderTopWidth: 1,
+          height: 68,
+          paddingBottom: 6,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
+          fontSize: 11,
           fontWeight: '900',
           textTransform: 'uppercase',
         },
@@ -42,7 +46,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: 'Historico',
+          title: 'Histórico',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons
               color={String(color)}
@@ -55,10 +59,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Ajustes',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons color={String(color)} name="cog" size={size} />
-          ),
+          href: null,
         }}
       />
     </Tabs>
