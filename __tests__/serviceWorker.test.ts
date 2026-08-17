@@ -8,7 +8,7 @@ describe('service worker privacy contract', () => {
     expect(source).toContain("request.method !== 'GET'");
   });
 
-  it.each(['/candidate-photos/', '/captures', '/matches', '/rankings'])(
+  it.each(['/candidate-photos/', '/captures', '/matches', '/rankings', '/admin'])(
     'excludes %s from caching',
     (path) => {
       expect(source).toContain(`'${path}'`);
