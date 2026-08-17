@@ -275,7 +275,7 @@ def _candidate_with_photo(
     if not photo_store.has(candidate.id):
         return candidate
     return candidate.model_copy(
-        update={"photo_url": str(request.url_for("candidate_photo", candidate_id=candidate.id))}
+        update={"photo_url": _candidate_photo_url(request, candidate.id)}
     )
 
 
@@ -287,15 +287,21 @@ def _matches_with_photos(
     return [
         match.model_copy(
             update={
-                "photo_url": str(
-                    request.url_for("candidate_photo", candidate_id=match.candidate_id)
-                )
+                "photo_url": _candidate_photo_url(request, match.candidate_id)
             }
         )
         if photo_store.has(match.candidate_id)
         else match
         for match in matches
     ]
+
+
+def _candidate_photo_url(request: Request, candidate_id: str) -> str:
+    url = request.url_for("candidate_photo", candidate_id=candidate_id)
+    forwarded_proto = request.headers.get("x-forwarded-proto")
+    if forwarded_proto in {"http", "https"}:
+        url = url.replace(scheme=forwarded_proto)
+    return str(url)
 
 
 def _read_image_size(image_bytes: bytes) -> tuple[int, int] | None:
