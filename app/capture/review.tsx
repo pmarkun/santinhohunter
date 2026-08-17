@@ -1,8 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { AnalysisProgress } from '@/components/AnalysisProgress';
 import { BottomActionBar } from '@/components/BottomActionBar';
 import { CandidateResultRow } from '@/components/CandidateResultRow';
 import { FlowTopBar } from '@/components/FlowTopBar';
@@ -291,12 +292,7 @@ export default function CaptureReviewScreen() {
         <Text style={styles.resultTitle}>{getResultTitle(state, faces, activeFaceIndex, reviewComplete)}</Text>
 
         {state === 'matching' || state === 'saving' ? (
-          <View style={styles.loadingRow}>
-            <ActivityIndicator color={colors.red} />
-            <Text style={styles.stateBody}>
-              {state === 'saving' ? 'Guardando a evidência...' : 'Comparando com a base do TSE...'}
-            </Text>
-          </View>
+          <AnalysisProgress mode={state} uf={draft.location.uf} />
         ) : null}
 
         {state === 'match_found' && !reviewComplete && activeSelection ? (
@@ -484,7 +480,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textTransform: 'uppercase',
   },
-  loadingRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.md, minHeight: 90 },
   centerState: { alignItems: 'flex-start', flex: 1, gap: spacing.md, justifyContent: 'center' },
   stateTitle: {
     color: colors.asphalt,
