@@ -1,17 +1,9 @@
 import { matchSantinhoFaces, matchSantinhoPhoto } from '@/services/matchService';
 
 jest.mock('expo-file-system', () => ({
-  File: class MockFile {
-    uri: string;
-
-    constructor(uri: string) {
-      this.uri = uri;
-    }
-
-    async bytes() {
-      return new Uint8Array([1, 2, 3]);
-    }
-  },
+  File: jest.fn().mockImplementation(() =>
+    new Blob(['photo'], { type: 'image/jpeg' }),
+  ),
 }));
 
 describe('matchService', () => {
@@ -58,7 +50,7 @@ describe('matchService', () => {
     const uploadedFile = body.get('file');
 
     expect(uploadedFile).toBeInstanceOf(Blob);
-    expect(uploadedFile).not.toHaveProperty('uri');
+    expect(uploadedFile).toEqual(expect.objectContaining({ name: 'santinho.jpg' }));
     expect(matches[0]).toEqual({
       id: '250002052120',
       electionYear: 2024,
