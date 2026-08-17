@@ -190,6 +190,74 @@ class CaptureCreateResponse(BaseModel):
     sync_status: Literal["synced"]
 
 
+class AdminLoginRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=512)
+
+
+class AdminSessionResponse(BaseModel):
+    token: str
+    expires_at: datetime
+
+
+class AdminStatusUpdateRequest(BaseModel):
+    status: CaptureStatus
+    reason: str = Field(min_length=3, max_length=500)
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str) -> str:
+        normalized = value.strip()
+        if len(normalized) < 3:
+            raise ValueError("Motivo deve ter ao menos 3 caracteres")
+        return normalized
+
+
+class AdminCaptureCandidate(BaseModel):
+    candidate: CandidateResponse
+    face_id: str | None = None
+    selection_type: CaptureMatchType
+    confidence: float | None = None
+
+
+class AdminModerationEvent(BaseModel):
+    id: str
+    previous_status: CaptureStatus
+    new_status: CaptureStatus
+    reason: str
+    created_at: datetime
+
+
+class AdminCaptureResponse(BaseModel):
+    id: str
+    client_capture_id: str
+    captured_at: datetime
+    created_at: datetime
+    uf: str
+    city: str | None = None
+    latitude_approx: float | None = None
+    longitude_approx: float | None = None
+    accuracy: float | None = None
+    status: CaptureStatus
+    source: CaptureSource
+    evidence_available: bool
+    evidence_mime_type: str | None = None
+    evidence_size_bytes: int | None = None
+    candidates: list[AdminCaptureCandidate] = Field(default_factory=list)
+    moderation_events: list[AdminModerationEvent] = Field(default_factory=list)
+
+
+class AdminCaptureSummary(BaseModel):
+    confirmed: int
+    rejected: int
+    without_evidence: int
+
+
+class AdminCaptureListResponse(BaseModel):
+    summary: AdminCaptureSummary
+    total: int
+    entries: list[AdminCaptureResponse]
+
+
 class RankingEntryResponse(BaseModel):
     candidate: CandidateResponse
     count: int
