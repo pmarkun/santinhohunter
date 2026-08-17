@@ -13,7 +13,7 @@ export default function DataDeletionScreen() {
         {
           title: 'O que pode ser removido',
           body:
-            'Podemos remover ou desassociar metadados de captura, candidato confirmado e registros de match vinculados ao pedido. Fotos brutas não são publicadas em galerias abertas no MVP.',
+            'Podemos remover a foto privada ou desassociar metadados de captura, candidato confirmado e registros de match vinculados ao pedido. As fotos não são publicadas em galerias abertas.',
         },
         {
           title: 'Prazo operacional',
@@ -22,7 +22,7 @@ export default function DataDeletionScreen() {
         },
       ]}
       title="Exclusão de Dados"
-      updatedAt="16/08/2026"
+      updatedAt="17/08/2026"
     />
   );
 }

@@ -28,6 +28,7 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="admin" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="capture/camera" options={{ headerShown: false }} />
           <Stack.Screen name="capture/review" options={{ headerShown: false }} />

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'santinhohunter-shell-v1';
+const CACHE_VERSION = 'santinhohunter-shell-v2';
 const APP_SHELL = [
   '/',
   '/hunt',
@@ -13,6 +13,7 @@ const PRIVATE_PATH_PREFIXES = [
   '/captures',
   '/matches',
   '/rankings',
+  '/admin',
 ];
 
 self.addEventListener('install', (event) => {

@@ -13,6 +13,7 @@ from santinho_hunter_api.models import (
     CaptureCreateRequest,
     Office,
 )
+from santinho_hunter_api.evidence_store import StoredEvidence
 from santinho_hunter_api.storage import CandidateEmbeddingStore
 
 
@@ -21,6 +22,33 @@ class RankingRow:
     candidate_id: str
     count: int
     last_capture_at: datetime
+
+
+@dataclass(frozen=True)
+class AdminCaptureRow:
+    id: str
+    client_capture_id: str
+    captured_at: datetime
+    created_at: datetime
+    uf: str
+    city: str | None
+    latitude_approx: float | None
+    longitude_approx: float | None
+    accuracy: float | None
+    status: str
+    source: str
+    evidence_filename: str | None
+    evidence_mime_type: str | None
+    evidence_size_bytes: int | None
+
+
+@dataclass(frozen=True)
+class ModerationEventRow:
+    id: str
+    previous_status: str
+    new_status: str
+    reason: str
+    created_at: datetime
 
 
 class CaptureStore:
@@ -40,6 +68,7 @@ class CaptureStore:
         self,
         payload: CaptureCreateRequest,
         candidates: CandidateEmbeddingStore,
+        evidence: StoredEvidence | None = None,
     ) -> str:
         selections = self._candidate_selections(payload)
         for selection in selections:
@@ -79,9 +108,13 @@ class CaptureStore:
                     selected_candidate_id,
                     office,
                     status,
-                    source
+                    source,
+                    evidence_filename,
+                    evidence_mime_type,
+                    evidence_size_bytes,
+                    evidence_sha256
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (client_capture_id) DO UPDATE SET
                     captured_at = EXCLUDED.captured_at,
                     uf = EXCLUDED.uf,
@@ -92,7 +125,11 @@ class CaptureStore:
                     selected_candidate_id = EXCLUDED.selected_candidate_id,
                     office = EXCLUDED.office,
                     status = EXCLUDED.status,
-                    source = EXCLUDED.source
+                    source = EXCLUDED.source,
+                    evidence_filename = COALESCE(EXCLUDED.evidence_filename, captures.evidence_filename),
+                    evidence_mime_type = COALESCE(EXCLUDED.evidence_mime_type, captures.evidence_mime_type),
+                    evidence_size_bytes = COALESCE(EXCLUDED.evidence_size_bytes, captures.evidence_size_bytes),
+                    evidence_sha256 = COALESCE(EXCLUDED.evidence_sha256, captures.evidence_sha256)
                 """,
                 (
                     capture_id,
@@ -108,6 +145,10 @@ class CaptureStore:
                     primary_selection.office,
                     payload.status,
                     payload.source,
+                    evidence.filename if evidence else None,
+                    evidence.mime_type if evidence else None,
+                    evidence.size_bytes if evidence else None,
+                    evidence.sha256 if evidence else None,
                 ),
             )
             self._execute(
@@ -200,6 +241,188 @@ class CaptureStore:
             for row in rows
         ]
 
+    def list_admin_captures(
+        self,
+        *,
+        status: str | None,
+        uf: str | None,
+        office: Office | None,
+        candidate_id: str | None,
+        date_from: datetime | None,
+        date_to: datetime | None,
+        query: str | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[int, list[AdminCaptureRow]]:
+        filters: list[str] = []
+        params: list[Any] = []
+        if status:
+            filters.append("c.status = ?")
+            params.append(status)
+        if uf:
+            filters.append("c.uf = ?")
+            params.append(uf)
+        if date_from:
+            filters.append("c.captured_at >= ?")
+            params.append(date_from)
+        if date_to:
+            filters.append("c.captured_at <= ?")
+            params.append(date_to)
+        if query:
+            filters.append("(LOWER(c.id) LIKE ? OR LOWER(c.client_capture_id) LIKE ?)")
+            pattern = f"%{query.lower()}%"
+            params.extend((pattern, pattern))
+        if office:
+            filters.append(
+                "EXISTS (SELECT 1 FROM capture_candidates cc WHERE cc.capture_id = c.id AND cc.office = ?)"
+            )
+            params.append(office)
+        if candidate_id:
+            filters.append(
+                "EXISTS (SELECT 1 FROM capture_candidates cc WHERE cc.capture_id = c.id AND cc.candidate_id = ?)"
+            )
+            params.append(candidate_id)
+
+        where = f"WHERE {' AND '.join(filters)}" if filters else ""
+        columns = """
+            c.id, c.client_capture_id, c.captured_at, c.created_at, c.uf, c.city,
+            c.latitude_approx, c.longitude_approx, c.accuracy, c.status, c.source,
+            c.evidence_filename, c.evidence_mime_type, c.evidence_size_bytes
+        """
+        with self._connection() as connection:
+            total = int(
+                self._fetchall(
+                    connection,
+                    f"SELECT COUNT(*) FROM captures c {where}",
+                    params,
+                )[0][0]
+            )
+            rows = self._fetchall(
+                connection,
+                f"SELECT {columns} FROM captures c {where} ORDER BY c.captured_at DESC LIMIT ? OFFSET ?",
+                (*params, limit, offset),
+            )
+        return total, [self._admin_capture_row(row) for row in rows]
+
+    def admin_summary(self) -> tuple[int, int, int]:
+        with self._connection() as connection:
+            row = self._fetchall(
+                connection,
+                """
+                SELECT
+                    SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN evidence_filename IS NULL THEN 1 ELSE 0 END)
+                FROM captures
+                """,
+                (),
+            )[0]
+        return tuple(int(value or 0) for value in row)  # type: ignore[return-value]
+
+    def get_admin_capture(self, capture_id: str) -> AdminCaptureRow | None:
+        with self._connection() as connection:
+            rows = self._fetchall(
+                connection,
+                """
+                SELECT id, client_capture_id, captured_at, created_at, uf, city,
+                       latitude_approx, longitude_approx, accuracy, status, source,
+                       evidence_filename, evidence_mime_type, evidence_size_bytes
+                FROM captures WHERE id = ?
+                """,
+                (capture_id,),
+            )
+        return self._admin_capture_row(rows[0]) if rows else None
+
+    def capture_candidates(self, capture_id: str) -> list[Any]:
+        with self._connection() as connection:
+            return self._fetchall(
+                connection,
+                """
+                SELECT candidate_id, office, face_id, selection_type, confidence
+                FROM capture_candidates WHERE capture_id = ? ORDER BY candidate_id
+                """,
+                (capture_id,),
+            )
+
+    def moderation_events(self, capture_id: str) -> list[ModerationEventRow]:
+        with self._connection() as connection:
+            rows = self._fetchall(
+                connection,
+                """
+                SELECT id, previous_status, new_status, reason, created_at
+                FROM capture_moderation_events
+                WHERE capture_id = ? ORDER BY created_at DESC
+                """,
+                (capture_id,),
+            )
+        return [
+            ModerationEventRow(
+                id=str(row[0]),
+                previous_status=str(row[1]),
+                new_status=str(row[2]),
+                reason=str(row[3]),
+                created_at=self._parse_datetime(row[4]),
+            )
+            for row in rows
+        ]
+
+    def update_status(self, capture_id: str, status: str, reason: str) -> bool:
+        with self._connection() as connection:
+            rows = self._fetchall(
+                connection,
+                "SELECT status FROM captures WHERE id = ?",
+                (capture_id,),
+            )
+            if not rows:
+                return False
+            previous_status = str(rows[0][0])
+            if previous_status == status:
+                return True
+            self._execute(
+                connection,
+                "UPDATE captures SET status = ? WHERE id = ?",
+                (status, capture_id),
+            )
+            self._execute(
+                connection,
+                """
+                INSERT INTO capture_moderation_events (
+                    id, capture_id, previous_status, new_status, reason, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (str(uuid4()), capture_id, previous_status, status, reason, datetime.now(UTC)),
+            )
+            connection.commit()
+        return True
+
+    def evidence_filename_for_client_capture(self, client_capture_id: str) -> str | None:
+        with self._connection() as connection:
+            rows = self._fetchall(
+                connection,
+                "SELECT evidence_filename FROM captures WHERE client_capture_id = ?",
+                (client_capture_id,),
+            )
+        return str(rows[0][0]) if rows and rows[0][0] else None
+
+    @staticmethod
+    def _admin_capture_row(row: Any) -> AdminCaptureRow:
+        return AdminCaptureRow(
+            id=str(row[0]),
+            client_capture_id=str(row[1]),
+            captured_at=CaptureStore._parse_datetime(row[2]),
+            created_at=CaptureStore._parse_datetime(row[3]),
+            uf=str(row[4]),
+            city=str(row[5]) if row[5] is not None else None,
+            latitude_approx=float(row[6]) if row[6] is not None else None,
+            longitude_approx=float(row[7]) if row[7] is not None else None,
+            accuracy=float(row[8]) if row[8] is not None else None,
+            status=str(row[9]),
+            source=str(row[10]),
+            evidence_filename=str(row[11]) if row[11] else None,
+            evidence_mime_type=str(row[12]) if row[12] else None,
+            evidence_size_bytes=int(row[13]) if row[13] is not None else None,
+        )
+
     def _ensure_sqlite_schema(self) -> None:
         sqlite_path = self._sqlite_path()
         sqlite_path.parent.mkdir(parents=True, exist_ok=True)
@@ -219,7 +442,11 @@ class CaptureStore:
                     office TEXT NOT NULL,
                     status TEXT NOT NULL,
                     source TEXT NOT NULL,
-                    client_capture_id TEXT NOT NULL UNIQUE
+                    client_capture_id TEXT NOT NULL UNIQUE,
+                    evidence_filename TEXT,
+                    evidence_mime_type TEXT,
+                    evidence_size_bytes INTEGER,
+                    evidence_sha256 TEXT
                 );
 
                 CREATE TABLE IF NOT EXISTS capture_matches (
@@ -241,6 +468,15 @@ class CaptureStore:
                     PRIMARY KEY (capture_id, candidate_id)
                 );
 
+                CREATE TABLE IF NOT EXISTS capture_moderation_events (
+                    id TEXT PRIMARY KEY,
+                    capture_id TEXT NOT NULL REFERENCES captures(id) ON DELETE CASCADE,
+                    previous_status TEXT NOT NULL,
+                    new_status TEXT NOT NULL,
+                    reason TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+
                 INSERT OR IGNORE INTO capture_candidates (
                     capture_id,
                     candidate_id,
@@ -253,6 +489,17 @@ class CaptureStore:
                 WHERE selected_candidate_id IS NOT NULL;
                 """
             )
+            existing_columns = {
+                str(row[1]) for row in connection.execute("PRAGMA table_info(captures)").fetchall()
+            }
+            for name, column_type in (
+                ("evidence_filename", "TEXT"),
+                ("evidence_mime_type", "TEXT"),
+                ("evidence_size_bytes", "INTEGER"),
+                ("evidence_sha256", "TEXT"),
+            ):
+                if name not in existing_columns:
+                    connection.execute(f"ALTER TABLE captures ADD COLUMN {name} {column_type}")
             connection.commit()
 
     def _ensure_postgres_schema(self) -> None:
@@ -273,11 +520,26 @@ class CaptureStore:
                     office TEXT NOT NULL,
                     status TEXT NOT NULL,
                     source TEXT NOT NULL,
-                    client_capture_id TEXT NOT NULL UNIQUE
+                    client_capture_id TEXT NOT NULL UNIQUE,
+                    evidence_filename TEXT,
+                    evidence_mime_type TEXT,
+                    evidence_size_bytes BIGINT,
+                    evidence_sha256 TEXT
                 )
                 """,
                 (),
             )
+            for column in (
+                "evidence_filename TEXT",
+                "evidence_mime_type TEXT",
+                "evidence_size_bytes BIGINT",
+                "evidence_sha256 TEXT",
+            ):
+                self._execute(
+                    connection,
+                    f"ALTER TABLE captures ADD COLUMN IF NOT EXISTS {column}",
+                    (),
+                )
             self._execute(
                 connection,
                 """
@@ -303,6 +565,20 @@ class CaptureStore:
                     selection_type TEXT NOT NULL,
                     confidence DOUBLE PRECISION,
                     PRIMARY KEY (capture_id, candidate_id)
+                )
+                """,
+                (),
+            )
+            self._execute(
+                connection,
+                """
+                CREATE TABLE IF NOT EXISTS capture_moderation_events (
+                    id TEXT PRIMARY KEY,
+                    capture_id TEXT NOT NULL REFERENCES captures(id) ON DELETE CASCADE,
+                    previous_status TEXT NOT NULL,
+                    new_status TEXT NOT NULL,
+                    reason TEXT NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL
                 )
                 """,
                 (),
@@ -402,7 +678,8 @@ class CaptureStore:
 
         return value
 
-    def _parse_datetime(self, value: Any) -> datetime:
+    @staticmethod
+    def _parse_datetime(value: Any) -> datetime:
         if isinstance(value, datetime):
             return value
 

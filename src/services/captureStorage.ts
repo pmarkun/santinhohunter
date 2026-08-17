@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { Office, SantinhoCapture } from '@/types/domain';
+import { clearCaptureEvidenceStorage } from '@/services/captureEvidenceStorage';
 
 const CAPTURES_KEY = 'santinhohunter:captures';
 
@@ -86,7 +87,10 @@ export async function confirmLatestCaptureCandidate(params: {
 }
 
 export async function clearStoredCaptures(): Promise<void> {
-  await AsyncStorage.removeItem(CAPTURES_KEY);
+  await Promise.all([
+    AsyncStorage.removeItem(CAPTURES_KEY),
+    clearCaptureEvidenceStorage(),
+  ]);
 }
 
 function normalizeCapture(capture: SantinhoCapture): SantinhoCapture {

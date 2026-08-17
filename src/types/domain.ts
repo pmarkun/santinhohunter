@@ -100,6 +100,8 @@ export type CaptureCandidateSelection = {
 export type SantinhoCapture = {
   id: string;
   photoUri: string;
+  evidenceUri?: string;
+  evidenceRequired?: boolean;
   createdAt: string;
   capturedAt: string;
   latitude?: number;

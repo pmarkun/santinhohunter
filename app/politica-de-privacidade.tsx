@@ -13,7 +13,7 @@ export default function PrivacyPolicyScreen() {
         {
           title: 'Uso da câmera e da foto',
           body:
-            'A câmera é usada para fotografar material eleitoral descartado. A foto pode ser processada para comparar o rosto impresso no santinho com fotos oficiais de candidatos. O app não tenta identificar pessoas comuns, transeuntes ou usuários.',
+            'A câmera é usada para fotografar material eleitoral descartado. Uma versão reduzida da foto pode ser processada para comparar o rosto impresso no santinho com fotos oficiais de candidatos e guardada de forma privada para conferência de registros incorretos. Metadados incorporados à imagem são removidos antes do armazenamento. O app não tenta identificar pessoas comuns, transeuntes ou usuários.',
         },
         {
           title: 'Localização',
@@ -23,7 +23,7 @@ export default function PrivacyPolicyScreen() {
         {
           title: 'Compartilhamento e retenção',
           body:
-            'Os dados são enviados por HTTPS para o backend do projeto e usados para sincronização, busca de candidatos, match facial e rankings agregados. Não vendemos dados. No MVP, fotos brutas não são publicadas em galerias abertas. Metadados de capturas podem ser mantidos até o fim da eleição ou removidos mediante pedido aplicável.',
+            'Os dados são enviados por HTTPS para o backend do projeto e usados para sincronização, busca de candidatos, match facial, moderação e rankings agregados. Não vendemos dados. As fotos não são publicadas em galerias abertas e só podem ser acessadas na operação privada do projeto. Fotos e metadados são mantidos enquanto o projeto estiver ativo ou até remoção mediante pedido aplicável.',
         },
         {
           title: 'Exclusão e contato',
@@ -32,7 +32,7 @@ export default function PrivacyPolicyScreen() {
         },
       ]}
       title="Política de Privacidade"
-      updatedAt="16/08/2026"
+      updatedAt="17/08/2026"
     />
   );
 }

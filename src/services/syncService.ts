@@ -5,6 +5,7 @@ import {
   updateStoredCapture,
 } from '@/services/captureStorage';
 import type { SantinhoCapture } from '@/types/domain';
+import { getCaptureEvidence } from '@/services/captureEvidenceStorage';
 
 type ApiCapturePayload = {
   client_capture_id: string;
@@ -42,13 +43,9 @@ export async function syncCapture(capture: SantinhoCapture): Promise<SantinhoCap
   }));
 
   try {
-    const response = await fetch(`${getApiBaseUrl()}/captures`, {
-      body: JSON.stringify(toApiPayload(capture)),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      method: 'POST',
-    });
+    const response = capture.evidenceRequired
+      ? await syncCaptureWithEvidence(capture)
+      : await syncLegacyCapture(capture);
 
     if (!response.ok) {
       throw new Error(`Sync falhou com status ${response.status}`);
@@ -68,6 +65,23 @@ export async function syncCapture(capture: SantinhoCapture): Promise<SantinhoCap
       }))) ?? { ...capture, syncStatus: 'sync_failed' }
     );
   }
+}
+
+async function syncLegacyCapture(capture: SantinhoCapture): Promise<Response> {
+  return fetch(`${getApiBaseUrl()}/captures`, {
+    body: JSON.stringify(toApiPayload(capture)),
+    headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+  });
+}
+
+async function syncCaptureWithEvidence(capture: SantinhoCapture): Promise<Response> {
+  if (!capture.evidenceUri) throw new Error('Captura sem evidência local');
+  const evidence = await getCaptureEvidence(capture.evidenceUri);
+  const body = new FormData();
+  body.append('payload', JSON.stringify(toApiPayload(capture)));
+  body.append('file', evidence, 'santinho.jpg');
+  return fetch(`${getApiBaseUrl()}/captures/with-evidence`, { body, method: 'POST' });
 }
 
 export async function syncPendingCaptures(): Promise<SantinhoCapture[]> {

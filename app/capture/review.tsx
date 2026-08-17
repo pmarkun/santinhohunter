@@ -17,6 +17,7 @@ import {
   setCaptureDraftActiveFace,
 } from '@/services/captureDraft';
 import { saveCapture } from '@/services/captureStorage';
+import { persistCaptureEvidence } from '@/services/captureEvidenceStorage';
 import { matchSantinhoFaces } from '@/services/matchService';
 import { syncCapture } from '@/services/syncService';
 import { colors } from '@/theme/colors';
@@ -177,9 +178,20 @@ export default function CaptureReviewScreen() {
 
     setState('saving');
     const now = new Date().toISOString();
+    const captureId = `cap-${Date.now()}`;
+    let evidenceUri: string;
+    try {
+      evidenceUri = await persistCaptureEvidence(captureId, currentDraft.photoUri);
+    } catch {
+      setError('Não consegui guardar a foto para envio. Tente novamente.');
+      setState('match_error');
+      return;
+    }
     const capture: SantinhoCapture = {
-      id: `cap-${Date.now()}`,
+      id: captureId,
       photoUri: currentDraft.photoUri,
+      evidenceUri,
+      evidenceRequired: true,
       createdAt: now,
       capturedAt: currentDraft.capturedAt,
       uf: currentDraft.location.uf,
