@@ -16,6 +16,7 @@ import {
 
 import { fetchPublicRanking } from '@/services/rankingService';
 import { getLandingCtas, type LandingCtaAction } from '@/services/landingCta';
+import { usePwaInstall } from '@/services/pwaInstall';
 import { getStoredUf } from '@/services/ufService';
 import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/typography';
@@ -44,6 +45,8 @@ export function LandingPage({ canInstall = false, onInstall }: LandingPageProps)
   const [rankingLoaded, setRankingLoaded] = useState(false);
   const [uf, setUf] = useState<Uf>('SP');
   const [consultedAt, setConsultedAt] = useState<Date | null>(null);
+  const pwaInstall = usePwaInstall();
+  const installAvailable = canInstall || pwaInstall.canInstall;
 
   useEffect(() => {
     let active = true;
@@ -66,7 +69,7 @@ export function LandingPage({ canInstall = false, onInstall }: LandingPageProps)
   }, []);
 
   const ctas = getLandingCtas({
-    canInstall,
+    canInstall: installAvailable,
     isAndroid,
     isDesktop,
     playStoreEnabled,
@@ -81,7 +84,11 @@ export function LandingPage({ canInstall = false, onInstall }: LandingPageProps)
       return;
     }
     if (action === 'install_pwa') {
-      await onInstall?.();
+      if (onInstall) {
+        await onInstall();
+      } else {
+        await pwaInstall.install();
+      }
       return;
     }
     router.push('/(tabs)/hunt');
