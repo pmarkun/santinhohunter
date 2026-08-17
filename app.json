@@ -2,7 +2,7 @@
   "expo": {
     "name": "Santinho Hunter",
     "slug": "santinhohunter",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Cace, registre e conte santinhos eleitorais jogados nas ruas.",
     "orientation": "portrait",
     "scheme": "santinhohunter",
@@ -34,7 +34,7 @@
     ],
     "android": {
       "package": "br.com.santinhohunter.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_COARSE_LOCATION",

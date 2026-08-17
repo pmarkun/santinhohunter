@@ -12,7 +12,7 @@ export async function getStoredCaptures(): Promise<SantinhoCapture[]> {
   }
 
   const parsed = JSON.parse(raw) as SantinhoCapture[];
-  return Array.isArray(parsed) ? parsed : [];
+  return Array.isArray(parsed) ? parsed.map(normalizeCapture) : [];
 }
 
 export async function saveCapture(capture: SantinhoCapture): Promise<SantinhoCapture[]> {
@@ -87,4 +87,26 @@ export async function confirmLatestCaptureCandidate(params: {
 
 export async function clearStoredCaptures(): Promise<void> {
   await AsyncStorage.removeItem(CAPTURES_KEY);
+}
+
+function normalizeCapture(capture: SantinhoCapture): SantinhoCapture {
+  if (capture.identifiedCandidates?.length || !capture.selectedCandidateId || !capture.office) {
+    return capture;
+  }
+
+  const primaryMatch = capture.candidateMatches.find(
+    (match) => match.candidateId === capture.selectedCandidateId,
+  );
+  return {
+    ...capture,
+    identifiedCandidates: [
+      {
+        candidateId: capture.selectedCandidateId,
+        office: capture.office,
+        selectionType:
+          primaryMatch?.matchType === 'face_vector' ? 'face_vector' : 'manual_selection',
+        ...(primaryMatch ? { confidence: primaryMatch.confidence } : {}),
+      },
+    ],
+  };
 }

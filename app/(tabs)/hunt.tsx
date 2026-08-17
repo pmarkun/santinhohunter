@@ -1,249 +1,266 @@
-import { type Href, router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { AppScreen } from '@/components/AppScreen';
-import { EmptyState } from '@/components/EmptyState';
-import { PrimaryActionButton } from '@/components/PrimaryActionButton';
+import { CaptureAction } from '@/components/CaptureAction';
+import { CompactTopBar } from '@/components/CompactTopBar';
+import { MobileScreen } from '@/components/MobileScreen';
+import { UfPickerModal } from '@/components/UfPickerModal';
 import { fetchPublicRanking } from '@/services/rankingService';
 import { syncPendingCaptures } from '@/services/syncService';
-import { formatRelativeTime } from '@/services/timeService';
-import { getStoredUf } from '@/services/ufService';
+import { getStoredUf, saveStoredUf } from '@/services/ufService';
 import { colors } from '@/theme/colors';
-import { radii, spacing } from '@/theme/layout';
-import { type } from '@/theme/typography';
+import { spacing } from '@/theme/layout';
+import { fontFamilies } from '@/theme/typography';
 import type { RankingEntry, Uf } from '@/types/domain';
 
 export default function HuntScreen() {
+  const { height } = useWindowDimensions();
+  const compact = height < 720;
   const [uf, setUf] = useState<Uf>('SP');
-  const [latestSantinhos, setLatestSantinhos] = useState<RankingEntry[]>([]);
+  const [ranking, setRanking] = useState<RankingEntry[]>([]);
+  const [ufPickerVisible, setUfPickerVisible] = useState(false);
 
   useEffect(() => {
     let active = true;
 
-    async function loadLatest() {
+    async function loadHome() {
       const storedUf = await getStoredUf();
-      await syncPendingCaptures();
-      const entries = await fetchPublicRanking({ uf: storedUf, office: 'federal_deputy' });
+      const [, entries] = await Promise.all([
+        syncPendingCaptures(),
+        fetchPublicRanking({ uf: storedUf, office: 'federal_deputy' }),
+      ]);
+
       if (active) {
         setUf(storedUf);
-        setLatestSantinhos(entries.slice(0, 3));
+        setRanking(entries);
       }
     }
 
-    loadLatest();
-
+    loadHome();
     return () => {
       active = false;
     };
   }, []);
 
+  const leader = ranking[0];
+  const total = useMemo(
+    () => ranking.reduce((sum, entry) => sum + entry.count, 0),
+    [ranking],
+  );
+
+  async function selectUf(nextUf: Uf) {
+    setUfPickerVisible(false);
+    setUf(nextUf);
+    await saveStoredUf(nextUf);
+    setRanking(await fetchPublicRanking({ uf: nextUf, office: 'federal_deputy' }));
+  }
+
   return (
-    <AppScreen>
-      <View style={styles.hero}>
-        <View style={styles.kickerWrap}>
-          <Text style={styles.kicker}>Eleição Geral 2026 / {uf}</Text>
-        </View>
-        <Text style={styles.title}>Caçadores de Santinhos</Text>
-        <Text style={styles.body}>
-          Toda eleição é a mesma coisa. Milhares de papéis espalhados pela cidade,
-          sujando as ruas em busca de votos.
-        </Text>
-        <Text style={styles.body}>
-          Junte-se aos Caçadores de Santinhos e ajude a denunciar!
-        </Text>
-        <Text style={styles.notice}>
-          Base TSE 2026 de SP carregada para busca manual. O match facial ainda
-          cresce conforme os embeddings das fotos oficiais são gerados.
-        </Text>
-      </View>
-
-      <PrimaryActionButton
-        label="Capturar"
-        onPress={() => router.push('/capture/camera')}
-      />
-
-      <View style={styles.latest}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Últimos Santinhos encontrados</Text>
-        </View>
-        <View style={styles.latestList}>
-          {latestSantinhos.length === 0 ? (
-            <EmptyState
-              body="Quando a primeira captura sincronizar, ela entra no ranking público."
-              title="Sem lixo contado ainda"
-            />
-          ) : null}
-          {latestSantinhos.map((entry) => (
-            <View key={entry.candidate.id} style={styles.santinhoRow}>
-              <View style={styles.thumb}>
-                <Text style={styles.thumbText}>IMG</Text>
-              </View>
-              <View style={styles.santinhoBody}>
-                <Text style={styles.santinhoName}>
-                  {entry.candidate.ballotName} - {entry.candidate.party}
-                </Text>
-                <Text style={styles.santinhoTime}>
-                  {formatRelativeTime(entry.lastCaptureAt)}
-                </Text>
-              </View>
-              <View style={styles.totalBadge}>
-                <Text style={styles.totalValue}>{entry.count}</Text>
-                <Text style={styles.totalLabel}>total</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <PrimaryActionButton
-        label="Ver o Ranking"
-        onPress={() => router.push('/(tabs)/ranking')}
-        variant="red"
-      />
-
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push('/sobre' as Href)}
-        style={({ pressed }) => [styles.aboutButton, pressed && styles.pressed]}
+    <>
+      <MobileScreen
+        compact={compact}
+        top={
+          <CompactTopBar
+            onPressUf={() => setUfPickerVisible(true)}
+            title="Caçadores de Santinhos"
+            uf={uf}
+          />
+        }
       >
-        <Text style={styles.aboutText}>sobre o projeto</Text>
-      </Pressable>
-    </AppScreen>
+      <View style={styles.intro}>
+        <Text numberOfLines={2} style={[styles.title, compact && styles.compactTitle]}>
+          Flagrar lixo eleitoral
+        </Text>
+        <Text numberOfLines={2} style={styles.body}>
+          Fotografe santinhos jogados na rua e mande para o ranking da sujeira.
+        </Text>
+      </View>
+
+      <CaptureAction compact={compact} onPress={() => router.push('/capture/camera')} />
+
+      <View style={styles.stateLine}>
+        <MaterialCommunityIcons color={colors.asphalt} name="map-marker" size={21} />
+        <Text style={styles.stateText}>
+          {total} {total === 1 ? 'flagrante' : 'flagrantes'} em {uf}
+        </Text>
+      </View>
+
+      <View style={styles.ranking}>
+        <View style={styles.rankingHeader}>
+          <Text style={styles.sectionTitle}>Ranking em {uf}</Text>
+          <Text onPress={() => router.push('/(tabs)/ranking')} style={styles.rankingLink}>
+            Ver ranking
+          </Text>
+        </View>
+
+        {leader ? (
+          <View style={styles.leaderRow}>
+            <Text style={styles.position}>1</Text>
+            {leader.candidate.photoUrl ? (
+              <Image source={{ uri: leader.candidate.photoUrl }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <MaterialCommunityIcons color={colors.muted} name="account" size={30} />
+              </View>
+            )}
+            <View style={styles.leaderBody}>
+              <Text numberOfLines={1} style={styles.leaderName}>
+                {leader.candidate.ballotName}
+              </Text>
+              <Text numberOfLines={1} style={styles.leaderMeta}>
+                {leader.candidate.number} / {leader.candidate.party}
+              </Text>
+            </View>
+            <View style={styles.countWrap}>
+              <Text style={styles.count}>{leader.count}</Text>
+              <Text style={styles.countLabel}>santinhos</Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.emptyRow}>
+            <Text style={styles.emptyText}>A rua ainda está quieta nesse ranking.</Text>
+          </View>
+        )}
+      </View>
+      </MobileScreen>
+      <UfPickerModal
+        activeUf={uf}
+        onClose={() => setUfPickerVisible(false)}
+        onSelect={selectUf}
+        visible={ufPickerVisible}
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    gap: spacing.lg,
-  },
-  kickerWrap: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.alert,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  kicker: {
-    color: colors.asphalt,
-    fontSize: 13,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+  intro: {
+    gap: spacing.xs,
   },
   title: {
     color: colors.asphalt,
-    fontSize: 42,
+    fontFamily: fontFamilies.display,
+    fontSize: 39,
     fontWeight: '900',
-    lineHeight: 45,
+    lineHeight: 40,
     textTransform: 'uppercase',
+  },
+  compactTitle: {
+    fontSize: 33,
+    lineHeight: 34,
   },
   body: {
     color: colors.steel,
-    fontSize: 18,
+    fontFamily: fontFamilies.body,
+    fontSize: 15,
     fontWeight: '600',
-    lineHeight: 27,
-  },
-  notice: {
-    backgroundColor: colors.alert,
-    borderRadius: radii.sm,
-    color: colors.asphalt,
-    fontSize: 14,
-    fontWeight: '900',
     lineHeight: 20,
-    padding: spacing.md,
-    textTransform: 'uppercase',
   },
-  latest: {
-    gap: spacing.lg,
+  stateLine: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 28,
   },
-  sectionHeader: {
-    borderBottomColor: colors.asphalt,
-    borderBottomWidth: 2,
-    paddingBottom: spacing.sm,
+  stateText: {
+    color: colors.asphalt,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  ranking: {
+    borderTopColor: colors.asphalt,
+    borderTopWidth: 1,
+  },
+  rankingHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 40,
   },
   sectionTitle: {
     color: colors.asphalt,
-    fontSize: 22,
+    fontFamily: fontFamilies.display,
+    fontSize: 17,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
-  latestList: {
-    gap: spacing.md,
-  },
-  santinhoRow: {
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderColor: colors.line,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.lg,
-    padding: spacing.lg,
-  },
-  thumb: {
-    alignItems: 'center',
-    aspectRatio: 1,
-    backgroundColor: colors.newsprint,
-    borderColor: colors.line,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    justifyContent: 'center',
-    width: 68,
-  },
-  thumbText: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  santinhoBody: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  santinhoName: {
+  rankingLink: {
     color: colors.asphalt,
-    fontSize: 16,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  santinhoTime: {
-    color: colors.steel,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  totalBadge: {
-    alignItems: 'center',
-    backgroundColor: colors.alert,
-    borderRadius: radii.md,
-    minWidth: 58,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  totalValue: {
-    color: colors.asphalt,
-    fontSize: 24,
-    fontWeight: '900',
-    lineHeight: 28,
-  },
-  totalLabel: {
-    color: colors.asphalt,
-    fontSize: 10,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  aboutButton: {
-    alignItems: 'center',
-    borderColor: colors.line,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    padding: spacing.md,
-  },
-  aboutText: {
-    color: colors.asphalt,
+    fontFamily: fontFamilies.display,
     fontSize: 14,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
-  pressed: {
-    opacity: 0.72,
+  leaderRow: {
+    alignItems: 'center',
+    borderTopColor: colors.line,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.md,
+    minHeight: 80,
+    paddingVertical: spacing.sm,
+  },
+  position: {
+    color: colors.asphalt,
+    fontFamily: fontFamilies.display,
+    fontSize: 36,
+    fontWeight: '900',
+  },
+  avatar: {
+    backgroundColor: colors.line,
+    height: 58,
+    width: 52,
+  },
+  avatarFallback: {
+    alignItems: 'center',
+    backgroundColor: '#EFEFEF',
+    height: 58,
+    justifyContent: 'center',
+    width: 52,
+  },
+  leaderBody: {
+    flex: 1,
+  },
+  leaderName: {
+    color: colors.asphalt,
+    fontFamily: fontFamilies.display,
+    fontSize: 19,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  leaderMeta: {
+    color: colors.steel,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  countWrap: {
+    alignItems: 'flex-end',
+  },
+  count: {
+    color: colors.asphalt,
+    fontFamily: fontFamilies.display,
+    fontSize: 30,
+    fontWeight: '900',
+    lineHeight: 31,
+  },
+  countLabel: {
+    color: colors.asphalt,
+    fontFamily: fontFamilies.display,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  emptyRow: {
+    borderTopColor: colors.line,
+    borderTopWidth: 1,
+    justifyContent: 'center',
+    minHeight: 70,
+  },
+  emptyText: {
+    color: colors.muted,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

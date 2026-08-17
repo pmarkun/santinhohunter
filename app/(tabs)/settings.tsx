@@ -1,15 +1,21 @@
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type Href, router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppScreen } from '@/components/AppScreen';
-import { getStoredUf, saveStoredUf, ufs } from '@/services/ufService';
+import { CompactTopBar } from '@/components/CompactTopBar';
+import { UfPickerModal } from '@/components/UfPickerModal';
+import { clearStoredCaptures } from '@/services/captureStorage';
+import { getStoredUf, saveStoredUf } from '@/services/ufService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/layout';
+import { fontFamilies } from '@/theme/typography';
 import type { Uf } from '@/types/domain';
 
 export default function SettingsScreen() {
   const [uf, setUf] = useState<Uf>('SP');
+  const [ufPickerVisible, setUfPickerVisible] = useState(false);
 
   useEffect(() => {
     getStoredUf().then(setUf);
@@ -17,153 +23,98 @@ export default function SettingsScreen() {
 
   async function selectUf(nextUf: Uf) {
     setUf(nextUf);
+    setUfPickerVisible(false);
     await saveStoredUf(nextUf);
   }
 
+  function confirmClearHistory() {
+    Alert.alert(
+      'Apagar histórico local?',
+      'Isso remove as fotos e os registros guardados neste aparelho. O ranking público não é alterado.',
+      [
+        { style: 'cancel', text: 'Cancelar' },
+        { onPress: clearStoredCaptures, style: 'destructive', text: 'Apagar' },
+      ],
+    );
+  }
+
   return (
-    <AppScreen>
-      <View>
-        <Text style={styles.kicker}>Ajustes</Text>
-        <Text style={styles.title}>{uf} na mira</Text>
-      </View>
-
-      <View style={styles.panel}>
-        <Text style={styles.panelTitle}>UF ativa</Text>
-        <View style={styles.ufGrid}>
-          {ufs.map((item) => (
-            <Pressable
-              accessibilityRole="button"
-              key={item}
-              onPress={() => selectUf(item)}
-              style={[styles.ufButton, uf === item && styles.ufButtonActive]}
-            >
-              <Text style={[styles.ufText, uf === item && styles.ufTextActive]}>{item}</Text>
+    <>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
+        <CompactTopBar title="Ajustes" />
+        <ScrollView contentContainerStyle={styles.content}>
+          <Section title="Estado na mira">
+            <Pressable accessibilityRole="button" onPress={() => setUfPickerVisible(true)} style={styles.ufRow}>
+              <Text style={styles.uf}>{uf}</Text>
+              <Text style={styles.changeLabel}>Trocar UF</Text>
+              <MaterialCommunityIcons color={colors.asphalt} name="chevron-right" size={24} />
             </Pressable>
-          ))}
-        </View>
-      </View>
+          </Section>
 
-      <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Política de uso</Text>
-        <Text style={styles.panelBody}>
-          Este app registra lixo eleitoral em espaço público. A câmera serve para o
-          flagra, a localização serve para o mapa aproximado, e o reconhecimento compara
-          santinhos com fotos oficiais de candidatos.
-        </Text>
-      </View>
+          <Section title="Permissões">
+            <Text style={styles.body}>
+              Câmera e localização são pedidas somente quando você abre um novo flagra.
+            </Text>
+          </Section>
 
-      <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Sem login no MVP</Text>
-        <Text style={styles.panelBody}>
-          Menos cadastro, mais rua. Capturas ficam locais até sincronizar.
-        </Text>
-      </View>
+          <Section title="Sobre os dados">
+            <Text style={styles.body}>
+              A busca e o reconhecimento usam candidaturas oficiais de 2026 importadas do TSE. A localização pública é aproximada.
+            </Text>
+          </Section>
 
-      <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Sobre os dados</Text>
-        <Text style={styles.panelBody}>
-          A busca manual usa o snapshot oficial de candidaturas 2026 do TSE para São
-          Paulo e Presidência. O reconhecimento facial ainda depende da geração dos
-          embeddings das fotos oficiais.
-        </Text>
-      </View>
+          <Section title="Projeto e políticas">
+            <LinkRow label="Sobre o projeto" route={'/sobre' as Href} />
+            <LinkRow label="Política de privacidade" route={'/politica-de-privacidade' as Href} />
+            <LinkRow label="Termos de uso" route={'/termos-de-uso' as Href} />
+            <LinkRow label="Exclusão de dados" route={'/exclusao-de-dados' as Href} />
+          </Section>
 
-      <View style={styles.linkList}>
-        <LinkButton label="Sobre o projeto" route={'/sobre' as Href} />
-        <LinkButton label="Política de privacidade" route={'/politica-de-privacidade' as Href} />
-        <LinkButton label="Termos de uso" route={'/termos-de-uso' as Href} />
-        <LinkButton label="Exclusão de dados" route={'/exclusao-de-dados' as Href} />
-      </View>
-    </AppScreen>
+          <Pressable accessibilityRole="button" onPress={confirmClearHistory} style={styles.dangerButton}>
+            <MaterialCommunityIcons color={colors.red} name="delete-outline" size={21} />
+            <Text style={styles.dangerLabel}>Apagar histórico local</Text>
+          </Pressable>
+        </ScrollView>
+      </SafeAreaView>
+      <UfPickerModal
+        activeUf={uf}
+        onClose={() => setUfPickerVisible(false)}
+        onSelect={selectUf}
+        visible={ufPickerVisible}
+      />
+    </>
+  );
+}
+
+function Section({ children, title }: { children: React.ReactNode; title: string }) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {children}
+    </View>
+  );
+}
+
+function LinkRow({ label, route }: { label: string; route: Href }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={() => router.push(route)} style={styles.linkRow}>
+      <Text style={styles.linkLabel}>{label}</Text>
+      <MaterialCommunityIcons color={colors.asphalt} name="chevron-right" size={22} />
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  kicker: {
-    color: colors.red,
-    fontSize: 13,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: colors.asphalt,
-    fontSize: 32,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  panel: {
-    backgroundColor: colors.card,
-    borderColor: colors.line,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: spacing.sm,
-    padding: spacing.lg,
-  },
-  panelTitle: {
-    color: colors.asphalt,
-    fontSize: 18,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  panelBody: {
-    color: colors.steel,
-    fontSize: 15,
-    fontWeight: '700',
-    lineHeight: 22,
-  },
-  ufGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  ufButton: {
-    alignItems: 'center',
-    backgroundColor: colors.newsprint,
-    borderColor: colors.line,
-    borderRadius: 6,
-    borderWidth: 1,
-    minWidth: 46,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  ufButtonActive: {
-    backgroundColor: colors.alert,
-    borderColor: colors.asphalt,
-  },
-  ufText: {
-    color: colors.asphalt,
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  ufTextActive: {
-    color: colors.asphalt,
-  },
-  linkList: {
-    gap: spacing.sm,
-  },
-  linkButton: {
-    alignItems: 'center',
-    borderColor: colors.line,
-    borderRadius: 6,
-    borderWidth: 1,
-    padding: spacing.md,
-  },
-  linkText: {
-    color: colors.asphalt,
-    fontSize: 14,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
+  safeArea: { backgroundColor: colors.paper, flex: 1 },
+  content: { padding: spacing.xl },
+  section: { borderBottomColor: colors.asphalt, borderBottomWidth: 1, paddingBottom: spacing.xl, paddingTop: spacing.lg },
+  sectionTitle: { color: colors.asphalt, fontFamily: fontFamilies.display, fontSize: 21, fontWeight: '900', marginBottom: spacing.md, textTransform: 'uppercase' },
+  body: { color: colors.steel, fontSize: 15, fontWeight: '600', lineHeight: 22 },
+  ufRow: { alignItems: 'center', flexDirection: 'row', minHeight: 58 },
+  uf: { color: colors.asphalt, flex: 1, fontFamily: fontFamilies.display, fontSize: 40, fontWeight: '900' },
+  changeLabel: { color: colors.asphalt, fontFamily: fontFamilies.display, fontSize: 15, fontWeight: '900', textTransform: 'uppercase' },
+  linkRow: { alignItems: 'center', borderTopColor: colors.line, borderTopWidth: 1, flexDirection: 'row', minHeight: 52 },
+  linkLabel: { color: colors.asphalt, flex: 1, fontFamily: fontFamilies.display, fontSize: 16, fontWeight: '900', textTransform: 'uppercase' },
+  dangerButton: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm, justifyContent: 'center', minHeight: 58, marginTop: spacing.xl },
+  dangerLabel: { color: colors.red, fontFamily: fontFamilies.display, fontSize: 16, fontWeight: '900', textTransform: 'uppercase' },
 });
-
-function LinkButton({ label, route }: { label: string; route: Href }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => router.push(route)}
-      style={({ pressed }) => [styles.linkButton, pressed && { opacity: 0.72 }]}
-    >
-      <Text style={styles.linkText}>{label}</Text>
-    </Pressable>
-  );
-}

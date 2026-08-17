@@ -13,9 +13,9 @@ export const officeLabels: Record<Office, string> = {
 };
 
 export const rankingOffices: Office[] = [
-  'president',
-  'governor',
-  'senator',
   'federal_deputy',
   'state_deputy',
+  'senator',
+  'governor',
+  'president',
 ];

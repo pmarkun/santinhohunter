@@ -8,7 +8,11 @@ import sqlite3
 from typing import Any, Iterator, Sequence
 from uuid import uuid4
 
-from santinho_hunter_api.models import CaptureCreateRequest, Office
+from santinho_hunter_api.models import (
+    CaptureCandidateSelectionInput,
+    CaptureCreateRequest,
+    Office,
+)
 from santinho_hunter_api.storage import CandidateEmbeddingStore
 
 
@@ -37,8 +41,12 @@ class CaptureStore:
         payload: CaptureCreateRequest,
         candidates: CandidateEmbeddingStore,
     ) -> str:
-        if candidates.find(payload.selected_candidate_id) is None:
-            raise ValueError("Candidato selecionado não existe na base atual")
+        selections = self._candidate_selections(payload)
+        for selection in selections:
+            if candidates.find(selection.candidate_id) is None:
+                raise ValueError(
+                    f"Candidato selecionado não existe na base atual: {selection.candidate_id}"
+                )
 
         for match in payload.candidate_matches:
             if candidates.find(match.candidate_id) is None:
@@ -48,6 +56,7 @@ class CaptureStore:
         now = datetime.now(UTC)
         latitude_approx = self._approximate_coordinate(payload.latitude)
         longitude_approx = self._approximate_coordinate(payload.longitude)
+        primary_selection = selections[0]
 
         with self._connection() as connection:
             existing_id = self._fetch_existing_capture_id(connection, payload.client_capture_id)
@@ -95,8 +104,8 @@ class CaptureStore:
                     latitude_approx,
                     longitude_approx,
                     payload.accuracy,
-                    payload.selected_candidate_id,
-                    payload.office,
+                    primary_selection.candidate_id,
+                    primary_selection.office,
                     payload.status,
                     payload.source,
                 ),
@@ -106,6 +115,39 @@ class CaptureStore:
                 "DELETE FROM capture_matches WHERE capture_id = ?",
                 (capture_id,),
             )
+            self._execute(
+                connection,
+                "DELETE FROM capture_candidates WHERE capture_id = ?",
+                (capture_id,),
+            )
+            for selection in selections:
+                self._execute(
+                    connection,
+                    """
+                    INSERT INTO capture_candidates (
+                        capture_id,
+                        candidate_id,
+                        office,
+                        face_id,
+                        selection_type,
+                        confidence
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (capture_id, candidate_id) DO UPDATE SET
+                        office = EXCLUDED.office,
+                        face_id = EXCLUDED.face_id,
+                        selection_type = EXCLUDED.selection_type,
+                        confidence = EXCLUDED.confidence
+                    """,
+                    (
+                        capture_id,
+                        selection.candidate_id,
+                        selection.office,
+                        selection.face_id,
+                        selection.selection_type,
+                        selection.confidence,
+                    ),
+                )
             for match in payload.candidate_matches:
                 self._execute(
                     connection,
@@ -137,13 +179,13 @@ class CaptureStore:
             rows = self._fetchall(
                 connection,
                 """
-                SELECT selected_candidate_id, COUNT(*) AS total, MAX(captured_at) AS last_capture_at
-                FROM captures
-                WHERE uf = ?
-                  AND office = ?
-                  AND status = 'confirmed'
-                  AND selected_candidate_id IS NOT NULL
-                GROUP BY selected_candidate_id
+                SELECT cc.candidate_id, COUNT(*) AS total, MAX(c.captured_at) AS last_capture_at
+                FROM capture_candidates cc
+                JOIN captures c ON c.id = cc.capture_id
+                WHERE c.uf = ?
+                  AND cc.office = ?
+                  AND c.status = 'confirmed'
+                GROUP BY cc.candidate_id
                 ORDER BY total DESC, last_capture_at DESC
                 """,
                 (uf, office),
@@ -188,6 +230,27 @@ class CaptureStore:
                     rank INTEGER NOT NULL,
                     PRIMARY KEY (capture_id, candidate_id, match_type, rank)
                 );
+
+                CREATE TABLE IF NOT EXISTS capture_candidates (
+                    capture_id TEXT NOT NULL REFERENCES captures(id) ON DELETE CASCADE,
+                    candidate_id TEXT NOT NULL,
+                    office TEXT NOT NULL,
+                    face_id TEXT,
+                    selection_type TEXT NOT NULL,
+                    confidence REAL,
+                    PRIMARY KEY (capture_id, candidate_id)
+                );
+
+                INSERT OR IGNORE INTO capture_candidates (
+                    capture_id,
+                    candidate_id,
+                    office,
+                    selection_type,
+                    confidence
+                )
+                SELECT id, selected_candidate_id, office, 'manual_selection', 1
+                FROM captures
+                WHERE selected_candidate_id IS NOT NULL;
                 """
             )
             connection.commit()
@@ -229,7 +292,61 @@ class CaptureStore:
                 """,
                 (),
             )
+            self._execute(
+                connection,
+                """
+                CREATE TABLE IF NOT EXISTS capture_candidates (
+                    capture_id TEXT NOT NULL REFERENCES captures(id) ON DELETE CASCADE,
+                    candidate_id TEXT NOT NULL,
+                    office TEXT NOT NULL,
+                    face_id TEXT,
+                    selection_type TEXT NOT NULL,
+                    confidence DOUBLE PRECISION,
+                    PRIMARY KEY (capture_id, candidate_id)
+                )
+                """,
+                (),
+            )
+            self._execute(
+                connection,
+                """
+                INSERT INTO capture_candidates (
+                    capture_id,
+                    candidate_id,
+                    office,
+                    selection_type,
+                    confidence
+                )
+                SELECT id, selected_candidate_id, office, 'manual_selection', 1
+                FROM captures
+                WHERE selected_candidate_id IS NOT NULL
+                ON CONFLICT (capture_id, candidate_id) DO NOTHING
+                """,
+                (),
+            )
             connection.commit()
+
+    @staticmethod
+    def _candidate_selections(
+        payload: CaptureCreateRequest,
+    ) -> list[CaptureCandidateSelectionInput]:
+        if payload.selected_candidates:
+            unique: dict[str, CaptureCandidateSelectionInput] = {}
+            for selection in payload.selected_candidates:
+                unique[selection.candidate_id] = selection
+            return list(unique.values())
+
+        if not payload.selected_candidate_id or not payload.office:
+            raise ValueError("Captura sem candidato selecionado")
+
+        return [
+            CaptureCandidateSelectionInput(
+                candidate_id=payload.selected_candidate_id,
+                office=payload.office,
+                selection_type="manual_selection",
+                confidence=1,
+            )
+        ]
 
     @contextmanager
     def _connection(self) -> Iterator[Any]:

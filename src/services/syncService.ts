@@ -16,6 +16,13 @@ type ApiCapturePayload = {
   accuracy?: number;
   selected_candidate_id: string;
   office: string;
+  selected_candidates?: {
+    candidate_id: string;
+    office: string;
+    face_id?: string;
+    selection_type: string;
+    confidence?: number;
+  }[];
   candidate_matches: {
     candidate_id: string;
     confidence: number;
@@ -85,13 +92,16 @@ export async function syncPendingCaptures(): Promise<SantinhoCapture[]> {
 function canSyncCapture(capture: SantinhoCapture): boolean {
   return (
     capture.status === 'confirmed' &&
-    Boolean(capture.selectedCandidateId) &&
-    Boolean(capture.office)
+    ((Boolean(capture.selectedCandidateId) && Boolean(capture.office)) ||
+      Boolean(capture.identifiedCandidates?.length))
   );
 }
 
 function toApiPayload(capture: SantinhoCapture): ApiCapturePayload {
-  if (!capture.selectedCandidateId || !capture.office) {
+  const primarySelection = capture.identifiedCandidates?.[0];
+  const selectedCandidateId = capture.selectedCandidateId ?? primarySelection?.candidateId;
+  const office = capture.office ?? primarySelection?.office;
+  if (!selectedCandidateId || !office) {
     throw new Error('Captura sem candidato confirmado');
   }
 
@@ -103,8 +113,21 @@ function toApiPayload(capture: SantinhoCapture): ApiCapturePayload {
     ...(capture.latitude !== undefined ? { latitude: capture.latitude } : {}),
     ...(capture.longitude !== undefined ? { longitude: capture.longitude } : {}),
     ...(capture.accuracy !== undefined ? { accuracy: capture.accuracy } : {}),
-    selected_candidate_id: capture.selectedCandidateId,
-    office: capture.office,
+    selected_candidate_id: selectedCandidateId,
+    office,
+    ...(capture.identifiedCandidates?.length
+      ? {
+          selected_candidates: capture.identifiedCandidates.map((selection) => ({
+            candidate_id: selection.candidateId,
+            office: selection.office,
+            ...(selection.faceId ? { face_id: selection.faceId } : {}),
+            selection_type: selection.selectionType,
+            ...(selection.confidence !== undefined
+              ? { confidence: selection.confidence }
+              : {}),
+          })),
+        }
+      : {}),
     candidate_matches: capture.candidateMatches.map((match) => ({
       candidate_id: match.candidateId,
       confidence: match.confidence,

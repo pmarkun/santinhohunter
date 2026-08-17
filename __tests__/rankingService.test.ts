@@ -72,6 +72,37 @@ describe('rankingService', () => {
     expect(ranking).toEqual([]);
   });
 
+  it('counts every identified candidate from the same capture', () => {
+    const ranking = buildRanking({
+      uf: 'SP',
+      office: 'governor',
+      captures: [
+        {
+          ...baseCapture,
+          identifiedCandidates: [
+            {
+              candidateId: 'sp-governor-10',
+              office: 'governor',
+              faceId: 'face-0',
+              selectionType: 'face_vector',
+            },
+            {
+              candidateId: 'sp-governor-13',
+              office: 'governor',
+              faceId: 'face-1',
+              selectionType: 'manual_selection',
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(ranking.map((entry) => entry.candidate.id)).toEqual([
+      'sp-governor-10',
+      'sp-governor-13',
+    ]);
+  });
+
   it('uses public ranking API and caches the latest result', async () => {
     jest.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,

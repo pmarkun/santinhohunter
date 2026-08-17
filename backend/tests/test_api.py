@@ -1,9 +1,13 @@
+from io import BytesIO
 from pathlib import Path
 import sqlite3
 
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from santinho_hunter_api.config import Settings
+from santinho_hunter_api.face.deepface_provider import DeepFaceProvider
+from santinho_hunter_api.face.provider import FaceEmbedding
 from santinho_hunter_api.main import app
 from santinho_hunter_api.main import create_app
 
@@ -52,6 +56,38 @@ def test_match_embedding_returns_ranked_candidates() -> None:
     body = response.json()
     assert body["provider"] == "precomputed_embedding"
     assert body["matches"][0]["candidate_id"] == "sp-governor-10"
+
+
+def test_match_image_groups_every_detected_face(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        DeepFaceProvider,
+        "represent_image_bytes",
+        lambda _self, _image_bytes: [
+            FaceEmbedding([0.9, 0.1, 0.1, 0.0], box=(10, 20, 30, 40)),
+            FaceEmbedding([0.1, 0.9, 0.1, 0.0], box=(50, 80, 20, 50)),
+        ],
+    )
+    image_buffer = BytesIO()
+    Image.new("RGB", (100, 200), "white").save(image_buffer, format="JPEG")
+    client = make_test_client(tmp_path)
+
+    response = client.post(
+        "/matches?uf=SP&office=governor",
+        files={"file": ("santinho.jpg", image_buffer.getvalue(), "image/jpeg")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [face["face_id"] for face in body["faces"]] == ["face-0", "face-1"]
+    assert body["faces"][0]["matches"][0]["candidate_id"] == "sp-governor-10"
+    assert body["faces"][1]["matches"][0]["candidate_id"] == "sp-governor-13"
+    assert body["faces"][0]["bounding_box"] == {
+        "x": 0.1,
+        "y": 0.1,
+        "width": 0.3,
+        "height": 0.2,
+    }
+    assert body["matches"] == body["faces"][0]["matches"]
 
 
 def test_create_capture_returns_synced_and_approximates_location(tmp_path: Path) -> None:
@@ -153,6 +189,61 @@ def test_ranking_aggregates_confirmed_captures_by_candidate(tmp_path: Path) -> N
     assert body["office"] == "governor"
     assert body["entries"][0]["candidate"]["id"] == "sp-governor-10"
     assert body["entries"][0]["count"] == 2
+
+
+def test_capture_with_multiple_candidates_counts_each_candidate_once(tmp_path: Path) -> None:
+    database_path = tmp_path / "captures.sqlite3"
+    client = make_test_client(tmp_path)
+
+    response = client.post(
+        "/captures",
+        json={
+            "client_capture_id": "multi-candidate-capture",
+            "captured_at": "2026-06-02T12:00:00Z",
+            "uf": "SP",
+            "selected_candidates": [
+                {
+                    "candidate_id": "sp-governor-10",
+                    "office": "governor",
+                    "face_id": "face-0",
+                    "selection_type": "face_vector",
+                    "confidence": 0.91,
+                },
+                {
+                    "candidate_id": "sp-governor-13",
+                    "office": "governor",
+                    "face_id": "face-1",
+                    "selection_type": "manual_selection",
+                    "confidence": 1,
+                },
+                {
+                    "candidate_id": "sp-governor-10",
+                    "office": "governor",
+                    "face_id": "face-2",
+                    "selection_type": "face_vector",
+                    "confidence": 0.88,
+                },
+            ],
+            "candidate_matches": [],
+        },
+    )
+
+    assert response.status_code == 200
+    ranking = client.get("/rankings?uf=SP&office=governor").json()["entries"]
+    assert {entry["candidate"]["id"]: entry["count"] for entry in ranking} == {
+        "sp-governor-10": 1,
+        "sp-governor-13": 1,
+    }
+
+    connection = sqlite3.connect(database_path)
+    try:
+        relation_count = connection.execute(
+            "SELECT COUNT(*) FROM capture_candidates"
+        ).fetchone()[0]
+    finally:
+        connection.close()
+
+    assert relation_count == 2
 
 
 def test_ranking_does_not_expose_coordinates(tmp_path: Path) -> None:

@@ -33,8 +33,12 @@ export function buildRanking(params: {
       const candidateCaptures = params.captures.filter(
         (capture) =>
           capture.uf === params.uf &&
-          capture.office === params.office &&
-          capture.selectedCandidateId === candidate.id &&
+          (capture.identifiedCandidates?.some(
+            (selection) =>
+              selection.office === params.office && selection.candidateId === candidate.id,
+          ) ||
+            (capture.office === params.office &&
+              capture.selectedCandidateId === candidate.id)) &&
           capture.status === 'confirmed',
       );
 

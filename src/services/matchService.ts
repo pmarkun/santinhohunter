@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 
 import { apiCandidateToCandidate as mapApiCandidate } from '@/services/apiCandidate';
 import { getApiBaseUrl } from '@/services/apiConfig';
-import type { MatchedCandidate, Office, Uf } from '@/types/domain';
+import type { FaceMatchGroup, MatchedCandidate, Office, Uf } from '@/types/domain';
 
 type ApiMatchCandidate = {
   candidate_id: string;
@@ -18,6 +18,16 @@ type ApiMatchCandidate = {
 
 type ApiMatchResponse = {
   matches: ApiMatchCandidate[];
+  faces?: {
+    face_id: string;
+    bounding_box?: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    } | null;
+    matches: ApiMatchCandidate[];
+  }[];
 };
 
 export type MatchSantinhoPhotoParams = {
@@ -33,6 +43,13 @@ export function getMatchApiBaseUrl(): string {
 export async function matchSantinhoPhoto(
   params: MatchSantinhoPhotoParams,
 ): Promise<MatchedCandidate[]> {
+  const faces = await matchSantinhoFaces(params);
+  return faces[0]?.matches ?? [];
+}
+
+export async function matchSantinhoFaces(
+  params: MatchSantinhoPhotoParams,
+): Promise<FaceMatchGroup[]> {
   const body = new FormData();
   await appendPhoto(body, params.photoUri);
 
@@ -52,7 +69,18 @@ export async function matchSantinhoPhoto(
   }
 
   const payload = (await response.json()) as ApiMatchResponse;
-  return payload.matches.map((candidate) => apiCandidateToCandidate(candidate, params.uf));
+  const apiFaces =
+    payload.faces !== undefined
+      ? payload.faces
+      : payload.matches.length > 0
+        ? [{ face_id: 'face-0', bounding_box: null, matches: payload.matches }]
+        : [];
+
+  return apiFaces.map((face) => ({
+    faceId: face.face_id,
+    ...(face.bounding_box ? { boundingBox: face.bounding_box } : {}),
+    matches: face.matches.map((candidate) => apiCandidateToCandidate(candidate, params.uf)),
+  }));
 }
 
 async function appendPhoto(body: FormData, photoUri: string): Promise<void> {
