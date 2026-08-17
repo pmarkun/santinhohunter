@@ -7,6 +7,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryActionButton } from '@/components/PrimaryActionButton';
+import { selectCameraPictureSize } from '@/services/cameraService';
 import { setCaptureDraft } from '@/services/captureDraft';
 import { getCaptureLocation, type CaptureLocation } from '@/services/locationService';
 import { colors } from '@/theme/colors';
@@ -24,6 +25,7 @@ export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [capturing, setCapturing] = useState(false);
+  const [pictureSize, setPictureSize] = useState<string>();
   const [error, setError] = useState<string | null>(null);
 
   async function takePicture() {
@@ -35,10 +37,11 @@ export default function CameraScreen() {
     setError(null);
 
     try {
+      const captureStartedAt = performance.now();
       const capturedAt = new Date().toISOString();
       const [photo, location] = await Promise.all([
         withTimeout(
-          cameraRef.current.takePictureAsync({ quality: 0.72 }),
+          cameraRef.current.takePictureAsync({ quality: 0.76 }),
           10000,
           'A câmera demorou demais para responder.',
         ),
@@ -49,7 +52,18 @@ export default function CameraScreen() {
         throw new Error('Não consegui salvar a foto.');
       }
 
-      setCaptureDraft({ photoUri: photo.uri, location, capturedAt });
+      console.info('[capture-performance]', {
+        captureMs: Math.round(performance.now() - captureStartedAt),
+        height: photo.height,
+        width: photo.width,
+      });
+      setCaptureDraft({
+        photoUri: photo.uri,
+        photoWidth: photo.width,
+        photoHeight: photo.height,
+        location,
+        capturedAt,
+      });
       router.push('/capture/review');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não consegui capturar agora.');
@@ -89,7 +103,17 @@ export default function CameraScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} />
+      <CameraView
+        onCameraReady={() => {
+          cameraRef.current
+            ?.getAvailablePictureSizesAsync()
+            .then((sizes) => setPictureSize(selectCameraPictureSize(sizes)))
+            .catch(() => setPictureSize(undefined));
+        }}
+        pictureSize={pictureSize}
+        ref={cameraRef}
+        style={StyleSheet.absoluteFill}
+      />
 
       <SafeAreaView edges={['top']} style={styles.topControls}>
         <Pressable

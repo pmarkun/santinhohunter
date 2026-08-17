@@ -56,6 +56,12 @@ export default function CaptureReviewScreen() {
     try {
       const nextFaces = await matchSantinhoFaces({
         photoUri: currentDraft.photoUri,
+        ...(currentDraft.photoWidth !== undefined
+          ? { photoWidth: currentDraft.photoWidth }
+          : {}),
+        ...(currentDraft.photoHeight !== undefined
+          ? { photoHeight: currentDraft.photoHeight }
+          : {}),
         uf: currentDraft.location.uf,
       });
       if (nextFaces.length === 0) {

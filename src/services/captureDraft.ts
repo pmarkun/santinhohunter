@@ -3,6 +3,8 @@ import type { Candidate } from '@/types/domain';
 
 export type CaptureDraft = {
   photoUri: string;
+  photoWidth?: number;
+  photoHeight?: number;
   location: CaptureLocation;
   capturedAt: string;
   selectedCandidate?: Candidate;

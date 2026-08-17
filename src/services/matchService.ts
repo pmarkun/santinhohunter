@@ -34,8 +34,19 @@ type ApiMatchResponse = {
 
 export type MatchSantinhoPhotoParams = {
   photoUri: string;
+  photoWidth?: number;
+  photoHeight?: number;
   uf: Uf;
   office?: Office;
+  onPerformance?: (performance: MatchPerformance) => void;
+};
+
+export type MatchPerformance = {
+  prepareMs: number;
+  uploadMs: number;
+  totalMs: number;
+  uploadBytes?: number;
+  serverTiming?: string;
 };
 
 export function getMatchApiBaseUrl(): string {
@@ -52,9 +63,17 @@ export async function matchSantinhoPhoto(
 export async function matchSantinhoFaces(
   params: MatchSantinhoPhotoParams,
 ): Promise<FaceMatchGroup[]> {
-  const matchPhotoUri = await prepareMatchPhoto(params.photoUri).catch(() => params.photoUri);
+  const totalStartedAt = performance.now();
+  const prepareStartedAt = performance.now();
+  const matchPhotoUri = await prepareMatchPhoto(
+    params.photoUri,
+    params.photoWidth,
+    params.photoHeight,
+  ).catch(() => params.photoUri);
   const body = new FormData();
   await appendPhoto(body, matchPhotoUri);
+  const prepareMs = performance.now() - prepareStartedAt;
+  const uploadBytes = getFileSize(matchPhotoUri);
 
   const query = new URLSearchParams({ uf: params.uf });
 
@@ -63,6 +82,7 @@ export async function matchSantinhoFaces(
   }
 
   let response: Response;
+  const uploadStartedAt = performance.now();
   try {
     response = await fetch(`${getMatchApiBaseUrl()}/matches?${query.toString()}`, {
       body,
@@ -77,6 +97,16 @@ export async function matchSantinhoFaces(
   }
 
   const payload = (await response.json()) as ApiMatchResponse;
+  const serverTiming = response.headers?.get?.('server-timing') ?? undefined;
+  const performanceResult: MatchPerformance = {
+    prepareMs: Math.round(prepareMs),
+    uploadMs: Math.round(performance.now() - uploadStartedAt),
+    totalMs: Math.round(performance.now() - totalStartedAt),
+    ...(uploadBytes !== undefined ? { uploadBytes } : {}),
+    ...(serverTiming ? { serverTiming } : {}),
+  };
+  params.onPerformance?.(performanceResult);
+  console.info('[match-performance]', performanceResult);
   const apiFaces =
     payload.faces !== undefined
       ? payload.faces
@@ -94,14 +124,21 @@ export async function matchSantinhoFaces(
 export function getMatchResize(
   width: number,
   height: number,
-  maxDimension = 1280,
+  maxDimension = 1920,
 ): { width: number } | { height: number } | null {
   if (Math.max(width, height) <= maxDimension) return null;
   return width >= height ? { width: maxDimension } : { height: maxDimension };
 }
 
-async function prepareMatchPhoto(photoUri: string): Promise<string> {
-  const { width, height } = await getImageSize(photoUri);
+async function prepareMatchPhoto(
+  photoUri: string,
+  knownWidth?: number,
+  knownHeight?: number,
+): Promise<string> {
+  const { width, height } =
+    knownWidth && knownHeight
+      ? { width: knownWidth, height: knownHeight }
+      : await getImageSize(photoUri);
   return resizeMatchPhoto(photoUri, width, height);
 }
 
@@ -116,8 +153,17 @@ async function resizeMatchPhoto(
   const context = ImageManipulator.manipulate(photoUri);
   context.resize(resize);
   const image = await context.renderAsync();
-  const result = await image.saveAsync({ compress: 0.68, format: SaveFormat.JPEG });
+  const result = await image.saveAsync({ compress: 0.76, format: SaveFormat.JPEG });
   return result.uri;
+}
+
+function getFileSize(uri: string): number | undefined {
+  if (Platform.OS === 'web') return undefined;
+  try {
+    return new File(uri).size;
+  } catch {
+    return undefined;
+  }
 }
 
 function getImageSize(uri: string): Promise<{ width: number; height: number }> {
