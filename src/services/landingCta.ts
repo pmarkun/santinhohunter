@@ -5,6 +5,10 @@ export type LandingCta = {
   label: string;
 };
 
+export function shouldRenderLanding(platform: string): boolean {
+  return platform === 'web';
+}
+
 export function getLandingCtas(params: {
   canInstall: boolean;
   isAndroid: boolean;

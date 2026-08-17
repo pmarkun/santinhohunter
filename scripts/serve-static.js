@@ -35,7 +35,10 @@ function resolveFile(requestUrl, accept = '') {
     return staticRoute;
   }
 
-  if (path.extname(pathname) || (accept && !accept.includes('text/html'))) {
+  if (
+    path.extname(pathname) ||
+    (accept && accept !== '*/*' && !accept.includes('text/html'))
+  ) {
     return null;
   }
 

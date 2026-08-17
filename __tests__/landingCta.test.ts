@@ -1,6 +1,12 @@
-import { getLandingCtas } from '@/services/landingCta';
+import { getLandingCtas, shouldRenderLanding } from '@/services/landingCta';
 
 describe('landing CTAs', () => {
+  it('renders the landing only at the web root', () => {
+    expect(shouldRenderLanding('web')).toBe(true);
+    expect(shouldRenderLanding('android')).toBe(false);
+    expect(shouldRenderLanding('ios')).toBe(false);
+  });
+
   it('opens the Play Store first on Android when the listing is enabled', () => {
     expect(
       getLandingCtas({

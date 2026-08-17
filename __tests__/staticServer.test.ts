@@ -19,6 +19,10 @@ describe('static web server', () => {
     expect(file).toMatch(/ranking\.html$/);
   });
 
+  it('serves the root for generic HEAD clients', () => {
+    expect(resolveFile('/', '*/*')).toMatch(/index\.html$/);
+  });
+
   it('does not hide missing static files behind the app shell', () => {
     expect(resolveFile('/missing-script.js', '*/*')).toBeNull();
     expect(resolveFile('/missing-image.png', 'image/png')).toBeNull();

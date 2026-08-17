@@ -23,6 +23,7 @@ import { fontFamilies } from '@/theme/typography';
 import type { RankingEntry, Uf } from '@/types/domain';
 
 const heroImage = require('../../assets/landing-hero.jpg');
+const heroImageMobile = require('../../assets/landing-hero-mobile.jpg');
 const appPreview = require('../../assets/landing-app-preview.png');
 const huntQrCode = require('../../assets/landing-hunt-qr.png');
 
@@ -36,10 +37,11 @@ type LandingPageProps = {
 
 export function LandingPage({ canInstall = false, onInstall }: LandingPageProps) {
   const { height, width } = useWindowDimensions();
-  const isDesktop = width >= 900;
+  const [clientReady, setClientReady] = useState(false);
+  const isDesktop = clientReady && width >= 900;
   const isAndroid = useMemo(
-    () => typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent),
-    [],
+    () => clientReady && typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent),
+    [clientReady],
   );
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [rankingLoaded, setRankingLoaded] = useState(false);
@@ -47,6 +49,10 @@ export function LandingPage({ canInstall = false, onInstall }: LandingPageProps)
   const [consultedAt, setConsultedAt] = useState<Date | null>(null);
   const pwaInstall = usePwaInstall();
   const installAvailable = canInstall || pwaInstall.canInstall;
+
+  useEffect(() => {
+    setClientReady(true);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -126,7 +132,7 @@ export function LandingPage({ canInstall = false, onInstall }: LandingPageProps)
       <ScrollView style={styles.page} contentContainerStyle={styles.pageContent}>
         <ImageBackground
           accessibilityLabel="Santinhos eleitorais descartados em uma calçada"
-          source={heroImage}
+          source={isDesktop ? heroImage : heroImageMobile}
           style={[styles.hero, { minHeight: heroHeight }]}
           imageStyle={styles.heroImage}
         >
@@ -400,7 +406,7 @@ const styles = StyleSheet.create({
   page: { backgroundColor: colors.paper, flex: 1 },
   pageContent: { backgroundColor: colors.paper },
   hero: { justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 28 },
-  heroImage: { backgroundColor: '#D7D7D2' },
+  heroImage: { backgroundColor: '#D7D7D2', height: '100%', width: '100%' },
   header: {
     alignItems: 'center',
     alignSelf: 'center',
