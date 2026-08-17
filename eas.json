@@ -11,7 +11,8 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_SANTINHO_API_BASE_URL": "https://santinho-api-production.up.railway.app"
+        "EXPO_PUBLIC_SANTINHO_API_BASE_URL": "https://santinho-api-production.up.railway.app",
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a"
       }
     },
     "production": {
