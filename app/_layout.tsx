@@ -1,14 +1,23 @@
 import { Stack } from 'expo-router';
+import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { colors } from '@/theme/colors';
+import { PwaRuntime } from '@/components/PwaRuntime';
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <Head>
+          <title>Santinho Hunter</title>
+          <meta content="#FFD400" name="theme-color" />
+          <link href="/manifest.webmanifest" rel="manifest" />
+          <link href="/icon-192.png" rel="apple-touch-icon" />
+        </Head>
+        <PwaRuntime />
         <StatusBar style="dark" />
         <Stack
           screenOptions={{
