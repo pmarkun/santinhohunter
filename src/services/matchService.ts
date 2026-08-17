@@ -1,5 +1,6 @@
 import { File } from 'expo-file-system';
-import { Platform } from 'react-native';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { Image, Platform } from 'react-native';
 
 import { apiCandidateToCandidate as mapApiCandidate } from '@/services/apiCandidate';
 import { getApiBaseUrl } from '@/services/apiConfig';
@@ -50,8 +51,9 @@ export async function matchSantinhoPhoto(
 export async function matchSantinhoFaces(
   params: MatchSantinhoPhotoParams,
 ): Promise<FaceMatchGroup[]> {
+  const matchPhotoUri = await prepareMatchPhoto(params.photoUri).catch(() => params.photoUri);
   const body = new FormData();
-  await appendPhoto(body, params.photoUri);
+  await appendPhoto(body, matchPhotoUri);
 
   const query = new URLSearchParams({ uf: params.uf });
 
@@ -59,10 +61,15 @@ export async function matchSantinhoFaces(
     query.set('office', params.office);
   }
 
-  const response = await fetch(`${getMatchApiBaseUrl()}/matches?${query.toString()}`, {
-    body,
-    method: 'POST',
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${getMatchApiBaseUrl()}/matches?${query.toString()}`, {
+      body,
+      method: 'POST',
+    });
+  } finally {
+    removeTemporaryPhoto(matchPhotoUri, params.photoUri);
+  }
 
   if (!response.ok) {
     throw new Error(`Match falhou com status ${response.status}`);
@@ -81,6 +88,57 @@ export async function matchSantinhoFaces(
     ...(face.bounding_box ? { boundingBox: face.bounding_box } : {}),
     matches: face.matches.map((candidate) => apiCandidateToCandidate(candidate, params.uf)),
   }));
+}
+
+export function getMatchResize(
+  width: number,
+  height: number,
+  maxDimension = 1280,
+): { width: number } | { height: number } | null {
+  if (Math.max(width, height) <= maxDimension) return null;
+  return width >= height ? { width: maxDimension } : { height: maxDimension };
+}
+
+async function prepareMatchPhoto(photoUri: string): Promise<string> {
+  const { width, height } = await getImageSize(photoUri);
+  return resizeMatchPhoto(photoUri, width, height);
+}
+
+async function resizeMatchPhoto(
+  photoUri: string,
+  width: number,
+  height: number,
+): Promise<string> {
+  const resize = getMatchResize(width, height);
+  if (!resize) return photoUri;
+
+  const context = ImageManipulator.manipulate(photoUri);
+  context.resize(resize);
+  const image = await context.renderAsync();
+  const result = await image.saveAsync({ compress: 0.68, format: SaveFormat.JPEG });
+  return result.uri;
+}
+
+function getImageSize(uri: string): Promise<{ width: number; height: number }> {
+  if (Platform.OS === 'web') {
+    return new Promise((resolve, reject) => {
+      const image = document.createElement('img');
+      image.onload = () => resolve({ height: image.naturalHeight, width: image.naturalWidth });
+      image.onerror = () => reject(new Error('Não consegui ler o tamanho da foto.'));
+      image.src = uri;
+    });
+  }
+
+  return Image.getSize(uri);
+}
+
+function removeTemporaryPhoto(photoUri: string, originalPhotoUri: string): void {
+  if (Platform.OS === 'web' || photoUri === originalPhotoUri) return;
+  try {
+    new File(photoUri).delete();
+  } catch {
+    // Cache cleanup must never turn a successful match into an error.
+  }
 }
 
 async function appendPhoto(body: FormData, photoUri: string): Promise<void> {

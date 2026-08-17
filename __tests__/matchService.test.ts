@@ -1,4 +1,9 @@
-import { matchSantinhoFaces, matchSantinhoPhoto } from '@/services/matchService';
+import {
+  getMatchResize,
+  matchSantinhoFaces,
+  matchSantinhoPhoto,
+} from '@/services/matchService';
+import { Image } from 'react-native';
 
 jest.mock('expo-file-system', () => ({
   File: jest.fn().mockImplementation(() =>
@@ -9,7 +14,21 @@ jest.mock('expo-file-system', () => ({
 describe('matchService', () => {
   const originalFetch = global.fetch;
 
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.spyOn(Image, 'getSize').mockImplementation(
+      ((
+        _uri: string,
+        success?: (width: number, height: number) => void,
+      ) => {
+        success?.(3024, 4032);
+        return Promise.resolve({ height: 4032, width: 3024 });
+      }) as never,
+    );
+  });
+
   afterEach(() => {
+    jest.restoreAllMocks();
     global.fetch = originalFetch;
     delete process.env.EXPO_PUBLIC_SANTINHO_API_BASE_URL;
   });
@@ -63,6 +82,12 @@ describe('matchService', () => {
       confidence: 0.98,
       distance: 0.02,
     });
+  });
+
+  it('caps the longest photo dimension without changing its orientation', () => {
+    expect(getMatchResize(4032, 3024)).toEqual({ width: 1280 });
+    expect(getMatchResize(3024, 4032)).toEqual({ height: 1280 });
+    expect(getMatchResize(720, 1280)).toBeNull();
   });
 
   it('throws when the backend rejects the request', async () => {
