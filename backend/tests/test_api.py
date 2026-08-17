@@ -1,13 +1,16 @@
 from io import BytesIO
 from pathlib import Path
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
+from time import sleep
 
 from fastapi.testclient import TestClient
 from PIL import Image
 
 from santinho_hunter_api.config import Settings
 from santinho_hunter_api.face.deepface_provider import DeepFaceProvider
-from santinho_hunter_api.face.provider import FaceEmbedding
+from santinho_hunter_api.face.provider import FaceAnalysis, FaceEmbedding
 from santinho_hunter_api.main import app
 from santinho_hunter_api.main import create_app
 
@@ -61,11 +64,15 @@ def test_match_embedding_returns_ranked_candidates() -> None:
 def test_match_image_groups_every_detected_face(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(
         DeepFaceProvider,
-        "represent_image_bytes",
-        lambda _self, _image_bytes: [
-            FaceEmbedding([0.9, 0.1, 0.1, 0.0], box=(10, 20, 30, 40)),
-            FaceEmbedding([0.1, 0.9, 0.1, 0.0], box=(50, 80, 20, 50)),
-        ],
+        "analyze_image_bytes",
+        lambda _self, _image_bytes: FaceAnalysis(
+            faces=[
+                FaceEmbedding([0.9, 0.1, 0.1, 0.0], box=(10, 20, 30, 40)),
+                FaceEmbedding([0.1, 0.9, 0.1, 0.0], box=(50, 80, 20, 50)),
+            ],
+            detection_ms=12.5,
+            embedding_ms=8.5,
+        ),
     )
     image_buffer = BytesIO()
     Image.new("RGB", (100, 200), "white").save(image_buffer, format="JPEG")
@@ -77,6 +84,8 @@ def test_match_image_groups_every_detected_face(tmp_path: Path, monkeypatch) -> 
     )
 
     assert response.status_code == 200
+    assert "detect;dur=12.5" in response.headers["server-timing"]
+    assert "embed;dur=8.5" in response.headers["server-timing"]
     body = response.json()
     assert [face["face_id"] for face in body["faces"]] == ["face-0", "face-1"]
     assert body["faces"][0]["matches"][0]["candidate_id"] == "sp-governor-10"
@@ -88,6 +97,41 @@ def test_match_image_groups_every_detected_face(tmp_path: Path, monkeypatch) -> 
         "height": 0.2,
     }
     assert body["matches"] == body["faces"][0]["matches"]
+
+
+def test_match_image_limits_face_analysis_concurrency(tmp_path: Path, monkeypatch) -> None:
+    active = 0
+    maximum_active = 0
+    lock = Lock()
+
+    def analyze(_self, _image_bytes):
+        nonlocal active, maximum_active
+        with lock:
+            active += 1
+            maximum_active = max(maximum_active, active)
+        sleep(0.05)
+        with lock:
+            active -= 1
+        return FaceAnalysis(faces=[], detection_ms=50, embedding_ms=0)
+
+    monkeypatch.setattr(DeepFaceProvider, "analyze_image_bytes", analyze)
+    image_buffer = BytesIO()
+    Image.new("RGB", (100, 200), "white").save(image_buffer, format="JPEG")
+    image = image_buffer.getvalue()
+    client = make_test_client(tmp_path)
+
+    def request_match():
+        return client.post(
+            "/matches?uf=SP",
+            files={"file": ("santinho.jpg", image, "image/jpeg")},
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        responses = list(executor.map(lambda _index: request_match(), range(2)))
+
+    assert [response.status_code for response in responses] == [200, 200]
+    assert maximum_active == 1
+    assert any("queue;dur=" in response.headers["server-timing"] for response in responses)
 
 
 def test_create_capture_returns_synced_and_approximates_location(tmp_path: Path) -> None:

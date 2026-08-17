@@ -1,15 +1,19 @@
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from io import BytesIO
+from time import perf_counter
+from threading import BoundedSemaphore
 
 from fastapi import FastAPI, File, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.concurrency import run_in_threadpool
 from PIL import Image
 
 from santinho_hunter_api.candidate_photos import CandidatePhotoStore
 from santinho_hunter_api.capture_store import CaptureStore
 from santinho_hunter_api.config import Settings, get_settings
 from santinho_hunter_api.face.deepface_provider import DeepFaceProvider, DeepFaceUnavailableError
-from santinho_hunter_api.face.matcher import rank_matches
+from santinho_hunter_api.face.matcher import CandidateMatcher
 from santinho_hunter_api.models import (
     CandidateSearchResponse,
     CaptureCreateRequest,
@@ -37,6 +41,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
         candidate for candidate in store.all() if photo_store.has(candidate.candidate_id)
     ]
     match_candidates = candidates_with_photos or store.all()
+    matcher = CandidateMatcher(match_candidates)
     capture_store = CaptureStore(settings.database_url, settings.location_precision_decimals)
     capture_store.ensure_schema()
     face_provider = DeepFaceProvider(
@@ -44,14 +49,35 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
         detector_backend=settings.face_detector,
         device_policy=settings.face_device,
     )
+    face_queue = BoundedSemaphore(1)
+    warmup_photo = photo_store.first()
 
-    app = FastAPI(title="Santinho Hunter API")
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        try:
+            await run_in_threadpool(
+                face_provider.warm_up,
+                warmup_photo.content if warmup_photo else None,
+            )
+        except DeepFaceUnavailableError:
+            # The lightweight local backend intentionally works without DeepFace installed.
+            pass
+        yield
+
+    def analyze_queued(image_bytes: bytes):
+        queue_started_at = perf_counter()
+        with face_queue:
+            queue_ms = _elapsed_ms(queue_started_at)
+            return face_provider.analyze_image_bytes(image_bytes), queue_ms
+
+    app = FastAPI(title="Santinho Hunter API", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Server-Timing"],
     )
 
     @app.get("/health", response_model=HealthResponse)
@@ -69,9 +95,8 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     @app.post("/matches/embedding", response_model=MatchResponse)
     def match_embedding(payload: EmbeddingMatchRequest, request: Request) -> MatchResponse:
         matches = _matches_with_photos(
-            rank_matches(
+            matcher.rank(
                 payload.embedding,
-                match_candidates,
                 uf=payload.uf,
                 office=payload.office,
                 limit=payload.limit,
@@ -88,36 +113,50 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     @app.post("/matches", response_model=MatchResponse)
     async def match_image(
         request: Request,
+        response: Response,
         uf: str,
         office: Office | None = None,
         file: UploadFile = File(...),
     ) -> MatchResponse:
+        total_started_at = perf_counter()
+        read_started_at = perf_counter()
         image_bytes = await file.read()
+        read_ms = _elapsed_ms(read_started_at)
 
         if len(image_bytes) > settings.max_upload_bytes:
             raise HTTPException(status_code=413, detail="Image is too large")
 
         try:
-            face_embeddings = face_provider.represent_image_bytes(image_bytes)
+            analysis, queue_ms = await run_in_threadpool(analyze_queued, image_bytes)
         except DeepFaceUnavailableError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-        if not face_embeddings:
-            return MatchResponse(
+        if not analysis.faces:
+            result = MatchResponse(
                 matches=[],
                 provider=face_provider.provider_name,
                 model=settings.face_model,
                 detector=settings.face_detector,
                 device=face_provider.status().device,
             )
+            _set_server_timing(
+                response,
+                read_ms=read_ms,
+                queue_ms=queue_ms,
+                detection_ms=analysis.detection_ms,
+                embedding_ms=analysis.embedding_ms,
+                ranking_ms=0,
+                total_ms=_elapsed_ms(total_started_at),
+            )
+            return result
 
         image_size = _read_image_size(image_bytes)
+        ranking_started_at = perf_counter()
         faces = []
-        for index, face_embedding in enumerate(face_embeddings):
+        for index, face_embedding in enumerate(analysis.faces):
             face_matches = _matches_with_photos(
-                rank_matches(
+                matcher.rank(
                     face_embedding.embedding,
-                    match_candidates,
                     uf=uf,
                     office=office,
                     limit=settings.match_limit,
@@ -132,8 +171,9 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
                     matches=face_matches,
                 )
             )
+        ranking_ms = _elapsed_ms(ranking_started_at)
 
-        return MatchResponse(
+        result = MatchResponse(
             matches=faces[0].matches,
             faces=faces,
             provider=face_provider.provider_name,
@@ -141,6 +181,16 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
             detector=settings.face_detector,
             device=face_provider.status().device,
         )
+        _set_server_timing(
+            response,
+            read_ms=read_ms,
+            queue_ms=queue_ms,
+            detection_ms=analysis.detection_ms,
+            embedding_ms=analysis.embedding_ms,
+            ranking_ms=ranking_ms,
+            total_ms=_elapsed_ms(total_started_at),
+        )
+        return result
 
     @app.get("/candidates/search", response_model=CandidateSearchResponse)
     def search_candidates(
@@ -273,4 +323,31 @@ def _normalize_face_box(
         y=max(0, min(1, y / image_height)),
         width=max(0, min(1, width / image_width)),
         height=max(0, min(1, height / image_height)),
+    )
+
+
+def _elapsed_ms(started_at: float) -> float:
+    return (perf_counter() - started_at) * 1000
+
+
+def _set_server_timing(
+    response: Response,
+    *,
+    read_ms: float,
+    queue_ms: float,
+    detection_ms: float,
+    embedding_ms: float,
+    ranking_ms: float,
+    total_ms: float,
+) -> None:
+    metrics = (
+        ("read", read_ms),
+        ("queue", queue_ms),
+        ("detect", detection_ms),
+        ("embed", embedding_ms),
+        ("rank", ranking_ms),
+        ("total", total_ms),
+    )
+    response.headers["Server-Timing"] = ", ".join(
+        f"{name};dur={duration:.1f}" for name, duration in metrics
     )

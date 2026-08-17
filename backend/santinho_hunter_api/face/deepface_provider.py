@@ -1,9 +1,10 @@
 from pathlib import Path
 import os
 import tempfile
+from time import perf_counter
 from typing import Any
 
-from santinho_hunter_api.face.provider import FaceEmbedding, FaceProviderStatus
+from santinho_hunter_api.face.provider import FaceAnalysis, FaceEmbedding, FaceProviderStatus
 
 
 class DeepFaceUnavailableError(RuntimeError):
@@ -42,6 +43,9 @@ class DeepFaceProvider:
         )
 
     def represent_image_bytes(self, image_bytes: bytes) -> list[FaceEmbedding]:
+        return self.analyze_image_bytes(image_bytes).faces
+
+    def analyze_image_bytes(self, image_bytes: bytes) -> FaceAnalysis:
         self._ensure_loaded()
 
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as image_file:
@@ -49,17 +53,37 @@ class DeepFaceProvider:
             image_path = Path(image_file.name)
 
         try:
-            representations = self._deepface.represent(
-                img_path=str(image_path),
-                model_name=self.model_name,
-                detector_backend=self.detector_backend,
-                enforce_detection=False,
-                align=True,
-            )
+            detection_started_at = perf_counter()
+            try:
+                detected_faces = self._deepface.extract_faces(
+                    img_path=str(image_path),
+                    detector_backend=self.detector_backend,
+                    enforce_detection=True,
+                    align=True,
+                )
+            except ValueError as exc:
+                if not self._is_no_face_error(exc):
+                    raise
+                detected_faces = []
+            detection_ms = (perf_counter() - detection_started_at) * 1000
+
+            embedding_started_at = perf_counter()
+            faces = [self._represent_detected_face(face) for face in detected_faces]
+            embedding_ms = (perf_counter() - embedding_started_at) * 1000
         finally:
             image_path.unlink(missing_ok=True)
 
-        return [self._to_face_embedding(item) for item in representations]
+        return FaceAnalysis(
+            faces=faces,
+            detection_ms=detection_ms,
+            embedding_ms=embedding_ms,
+        )
+
+    def warm_up(self, sample_image_bytes: bytes | None = None) -> None:
+        self._ensure_loaded()
+        self._deepface.build_model(self.model_name)
+        if sample_image_bytes:
+            self.analyze_image_bytes(sample_image_bytes)
 
     def _ensure_loaded(self) -> None:
         if self._deepface is not None:
@@ -88,8 +112,21 @@ class DeepFaceProvider:
             return "unknown"
 
     @staticmethod
-    def _to_face_embedding(representation: dict[str, Any]) -> FaceEmbedding:
-        region = representation.get("facial_area") or {}
+    def _is_no_face_error(error: ValueError) -> bool:
+        message = str(error).lower()
+        return "face could not be detected" in message or "face cannot be detected" in message
+
+    def _represent_detected_face(self, detected_face: dict[str, Any]) -> FaceEmbedding:
+        face_image = detected_face["face"][:, :, ::-1]
+        representations = self._deepface.represent(
+            img_path=face_image,
+            model_name=self.model_name,
+            detector_backend="skip",
+            enforce_detection=True,
+            align=False,
+        )
+        representation = representations[0]
+        region = detected_face.get("facial_area") or {}
         box = None
 
         if {"x", "y", "w", "h"}.issubset(region):
