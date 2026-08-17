@@ -37,7 +37,7 @@ export default function CameraScreen() {
     try {
       const capturedAt = new Date().toISOString();
       const photo = await withTimeout(
-        cameraRef.current.takePictureAsync({ quality: 0.72 }),
+        cameraRef.current.takePictureAsync({ base64: true, quality: 0.72 }),
         10000,
         'A câmera demorou demais para responder.',
       );
@@ -49,7 +49,14 @@ export default function CameraScreen() {
         throw new Error('Não consegui salvar a foto.');
       }
 
-      setCaptureDraft({ photoUri: photo.uri, location, capturedAt });
+      setCaptureDraft({
+        photoUri: photo.uri,
+        previewUri: photo.base64
+          ? `data:image/${photo.format};base64,${photo.base64}`
+          : photo.uri,
+        location,
+        capturedAt,
+      });
       router.push('/capture/review');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não consegui capturar agora.');
