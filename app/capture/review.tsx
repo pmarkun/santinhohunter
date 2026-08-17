@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { router, type Href, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
@@ -238,7 +238,7 @@ export default function CaptureReviewScreen() {
     router.replace({
       pathname: '/capture/success',
       params: { syncStatus: syncedCapture.syncStatus },
-    });
+    } as unknown as Href);
   }
 
   function takeAnother() {

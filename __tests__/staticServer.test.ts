@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const {
@@ -12,6 +12,13 @@ const {
 };
 
 describe('static web server', () => {
+  beforeAll(() => {
+    mkdirSync(resolve('dist'), { recursive: true });
+    writeFileSync(resolve('dist/index.html'), '<!doctype html>');
+    writeFileSync(resolve('dist/ranking.html'), '<!doctype html>');
+    writeFileSync(resolve('dist/service-worker.js'), '');
+  });
+
   it('serves navigation routes through the app shell', () => {
     const file = resolveFile('/ranking', 'text/html');
     expect(file).not.toBeNull();
