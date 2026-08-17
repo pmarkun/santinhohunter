@@ -23,17 +23,15 @@ export function CandidateResultRow({ candidate, hint }: CandidateResultRowProps)
         </View>
       )}
       <View style={styles.body}>
-        <Text numberOfLines={1} style={styles.name}>
-          {candidate.ballotName}
-        </Text>
+        <Text style={styles.name}>{candidate.ballotName}</Text>
         <Text style={styles.meta}>
           {candidate.number} / {candidate.party}
         </Text>
         <Text numberOfLines={1} style={styles.office}>
           {officeLabels[candidate.office]}
         </Text>
+        {hint ? <Text style={styles.hint}>{hint}</Text> : null}
       </View>
-      {hint ? <Text style={styles.hint}>{hint}</Text> : null}
     </View>
   );
 }
@@ -64,6 +62,7 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
+    gap: 1,
   },
   name: {
     color: colors.asphalt,
@@ -89,5 +88,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 12,
     fontStyle: 'italic',
+    marginTop: 2,
   },
 });

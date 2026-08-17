@@ -15,6 +15,7 @@ type ApiMatchCandidate = {
   office: Office;
   distance: number;
   confidence: number;
+  photo_url?: string | null;
 };
 
 type ApiMatchResponse = {
@@ -164,6 +165,7 @@ function apiCandidateToCandidate(candidate: ApiMatchCandidate, uf: Uf): MatchedC
         ballot_name: candidate.ballot_name,
         full_name: candidate.ballot_name,
         party: candidate.party,
+        ...(candidate.photo_url !== undefined ? { photo_url: candidate.photo_url } : {}),
       },
       uf,
     ),

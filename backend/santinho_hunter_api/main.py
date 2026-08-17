@@ -1,10 +1,11 @@
 from datetime import UTC, datetime
 from io import BytesIO
 
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
+from santinho_hunter_api.candidate_photos import CandidatePhotoStore
 from santinho_hunter_api.capture_store import CaptureStore
 from santinho_hunter_api.config import Settings, get_settings
 from santinho_hunter_api.face.deepface_provider import DeepFaceProvider, DeepFaceUnavailableError
@@ -13,11 +14,13 @@ from santinho_hunter_api.models import (
     CandidateSearchResponse,
     CaptureCreateRequest,
     CaptureCreateResponse,
+    CandidateResponse,
     EmbeddingMatchRequest,
     FaceBoundingBox,
     FaceMatchGroup,
     HealthResponse,
     MatchResponse,
+    MatchCandidate,
     Office,
     RankingEntryResponse,
     RankingResponse,
@@ -29,6 +32,11 @@ from santinho_hunter_api.storage import CandidateEmbeddingStore
 def create_app(app_settings: Settings | None = None) -> FastAPI:
     settings = app_settings or get_settings()
     store = CandidateEmbeddingStore(settings.embeddings_path, settings.candidate_catalog_path)
+    photo_store = CandidatePhotoStore(settings.candidate_photo_archives)
+    candidates_with_photos = [
+        candidate for candidate in store.all() if photo_store.has(candidate.candidate_id)
+    ]
+    match_candidates = candidates_with_photos or store.all()
     capture_store = CaptureStore(settings.database_url, settings.location_precision_decimals)
     capture_store.ensure_schema()
     face_provider = DeepFaceProvider(
@@ -55,17 +63,21 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
             face_provider=status.provider,
             face_available=status.available,
             face_device=status.device,
-            embeddings_count=store.count(),
+            embeddings_count=len(match_candidates),
         )
 
     @app.post("/matches/embedding", response_model=MatchResponse)
-    def match_embedding(payload: EmbeddingMatchRequest) -> MatchResponse:
-        matches = rank_matches(
-            payload.embedding,
-            store.all(),
-            uf=payload.uf,
-            office=payload.office,
-            limit=payload.limit,
+    def match_embedding(payload: EmbeddingMatchRequest, request: Request) -> MatchResponse:
+        matches = _matches_with_photos(
+            rank_matches(
+                payload.embedding,
+                match_candidates,
+                uf=payload.uf,
+                office=payload.office,
+                limit=payload.limit,
+            ),
+            request,
+            photo_store,
         )
 
         return MatchResponse(
@@ -75,6 +87,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
 
     @app.post("/matches", response_model=MatchResponse)
     async def match_image(
+        request: Request,
         uf: str,
         office: Office | None = None,
         file: UploadFile = File(...),
@@ -101,12 +114,16 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
         image_size = _read_image_size(image_bytes)
         faces = []
         for index, face_embedding in enumerate(face_embeddings):
-            face_matches = rank_matches(
-                face_embedding.embedding,
-                store.all(),
-                uf=uf,
-                office=office,
-                limit=settings.match_limit,
+            face_matches = _matches_with_photos(
+                rank_matches(
+                    face_embedding.embedding,
+                    match_candidates,
+                    uf=uf,
+                    office=office,
+                    limit=settings.match_limit,
+                ),
+                request,
+                photo_store,
             )
             faces.append(
                 FaceMatchGroup(
@@ -127,6 +144,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
 
     @app.get("/candidates/search", response_model=CandidateSearchResponse)
     def search_candidates(
+        request: Request,
         uf: str,
         number: str,
         office: Office | None = None,
@@ -136,7 +154,20 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-        return CandidateSearchResponse(candidates=candidates)
+        return CandidateSearchResponse(
+            candidates=[_candidate_with_photo(candidate, request, photo_store) for candidate in candidates]
+        )
+
+    @app.get("/candidate-photos/{candidate_id}", name="candidate_photo")
+    def candidate_photo(candidate_id: str) -> Response:
+        photo = photo_store.read(candidate_id)
+        if photo is None:
+            raise HTTPException(status_code=404, detail="Candidate photo not found")
+        return Response(
+            content=photo.content,
+            media_type=photo.media_type,
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
 
     @app.post("/captures", response_model=CaptureCreateResponse)
     def create_capture(payload: CaptureCreateRequest) -> CaptureCreateResponse:
@@ -149,6 +180,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
 
     @app.get("/rankings", response_model=RankingResponse)
     def rankings(
+        request: Request,
         uf: str = Query(min_length=2, max_length=2),
         office: Office = Query(),
     ) -> RankingResponse:
@@ -166,7 +198,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
 
             entries.append(
                 RankingEntryResponse(
-                    candidate=candidate,
+                    candidate=_candidate_with_photo(candidate, request, photo_store),
                     count=row.count,
                     last_capture_at=row.last_capture_at,
                 )
@@ -183,6 +215,37 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
 
 
 app = create_app()
+
+
+def _candidate_with_photo(
+    candidate: CandidateResponse,
+    request: Request,
+    photo_store: CandidatePhotoStore,
+) -> CandidateResponse:
+    if not photo_store.has(candidate.id):
+        return candidate
+    return candidate.model_copy(
+        update={"photo_url": str(request.url_for("candidate_photo", candidate_id=candidate.id))}
+    )
+
+
+def _matches_with_photos(
+    matches: list[MatchCandidate],
+    request: Request,
+    photo_store: CandidatePhotoStore,
+) -> list[MatchCandidate]:
+    return [
+        match.model_copy(
+            update={
+                "photo_url": str(
+                    request.url_for("candidate_photo", candidate_id=match.candidate_id)
+                )
+            }
+        )
+        if photo_store.has(match.candidate_id)
+        else match
+        for match in matches
+    ]
 
 
 def _read_image_size(image_bytes: bytes) -> tuple[int, int] | None:

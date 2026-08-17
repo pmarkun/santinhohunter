@@ -15,9 +15,26 @@ class Settings:
     max_upload_bytes: int
     cors_origins: list[str]
     candidate_catalog_path: Path | None = None
+    candidate_photo_archives: tuple[Path, ...] = ()
 
 
 def get_settings() -> Settings:
+    candidate_catalog_path = (
+        Path(os.environ["SANTINHO_CANDIDATES_PATH"])
+        if os.getenv("SANTINHO_CANDIDATES_PATH")
+        else Path("backend/data/candidates.tse-2026.json")
+    )
+    configured_photo_archives = os.getenv("SANTINHO_CANDIDATE_PHOTO_ARCHIVES")
+    candidate_photo_archives = (
+        tuple(
+            Path(path.strip())
+            for path in configured_photo_archives.split(",")
+            if path.strip()
+        )
+        if configured_photo_archives
+        else tuple(sorted(candidate_catalog_path.parent.glob("foto_cand*_div.zip")))
+    )
+
     return Settings(
         embeddings_path=Path(
             os.getenv(
@@ -25,9 +42,8 @@ def get_settings() -> Settings:
                 "backend/data/candidate_embeddings.sample.json",
             )
         ),
-        candidate_catalog_path=Path(os.environ["SANTINHO_CANDIDATES_PATH"])
-        if os.getenv("SANTINHO_CANDIDATES_PATH")
-        else Path("backend/data/candidates.tse-2026.json"),
+        candidate_catalog_path=candidate_catalog_path,
+        candidate_photo_archives=candidate_photo_archives,
         database_url=os.getenv(
             "DATABASE_URL",
             "sqlite:///backend/data/santinhohunter.local.sqlite3",

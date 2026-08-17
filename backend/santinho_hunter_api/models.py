@@ -105,6 +105,7 @@ class MatchCandidate(BaseModel):
     office: Office
     distance: float
     confidence: float
+    photo_url: str | None = None
 
 
 class FaceBoundingBox(BaseModel):
