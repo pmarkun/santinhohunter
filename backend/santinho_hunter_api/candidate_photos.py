@@ -48,6 +48,10 @@ class CandidatePhotoStore:
     def has(self, candidate_id: str) -> bool:
         return candidate_id in self._locations
 
+    def first(self) -> CandidatePhoto | None:
+        candidate_id = next(iter(self._locations), None)
+        return self.read(candidate_id) if candidate_id else None
+
     def read(self, candidate_id: str) -> CandidatePhoto | None:
         location = self._locations.get(candidate_id)
         if location is None:

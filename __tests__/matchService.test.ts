@@ -6,9 +6,7 @@ import {
 import { Image } from 'react-native';
 
 jest.mock('expo-file-system', () => ({
-  File: jest.fn().mockImplementation(() =>
-    new Blob(['photo'], { type: 'image/jpeg' }),
-  ),
+  File: jest.fn().mockImplementation(() => new Blob(['photo'], { type: 'image/jpeg' })),
 }));
 
 describe('matchService', () => {
@@ -85,9 +83,31 @@ describe('matchService', () => {
   });
 
   it('caps the longest photo dimension without changing its orientation', () => {
-    expect(getMatchResize(4032, 3024)).toEqual({ width: 1280 });
-    expect(getMatchResize(3024, 4032)).toEqual({ height: 1280 });
-    expect(getMatchResize(720, 1280)).toBeNull();
+    expect(getMatchResize(4032, 3024)).toEqual({ width: 1920 });
+    expect(getMatchResize(3024, 4032)).toEqual({ height: 1920 });
+    expect(getMatchResize(1080, 1920)).toBeNull();
+  });
+
+  it('uses known capture dimensions without decoding the image again', async () => {
+    const onPerformance = jest.fn();
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'server-timing': 'total;dur=1200' }),
+      json: async () => ({ matches: [] }),
+    });
+
+    await matchSantinhoFaces({
+      photoUri: 'file:///tmp/santinho.jpg',
+      photoWidth: 1080,
+      photoHeight: 1920,
+      uf: 'SP',
+      onPerformance,
+    });
+
+    expect(Image.getSize).not.toHaveBeenCalled();
+    expect(onPerformance).toHaveBeenCalledWith(
+      expect.objectContaining({ uploadBytes: 5, serverTiming: 'total;dur=1200' }),
+    );
   });
 
   it('throws when the backend rejects the request', async () => {

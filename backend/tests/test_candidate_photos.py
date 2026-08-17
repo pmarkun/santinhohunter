@@ -107,3 +107,61 @@ def test_match_response_links_to_served_candidate_photo(tmp_path: Path) -> None:
     assert photo_response.status_code == 200
     assert photo_response.headers["content-type"] == "image/jpeg"
     assert photo_response.content == image_buffer.getvalue()
+
+
+def test_candidate_photo_link_uses_forwarded_https_scheme(tmp_path: Path) -> None:
+    candidate_id = "250002532324"
+    archive_path = tmp_path / "foto_cand2026_SP_div.zip"
+    image_buffer = BytesIO()
+    image = Image.new("RGB", (80, 100), "yellow")
+    for x in range(40, 80):
+        for y in range(100):
+            image.putpixel((x, y), (20, 80, 160))
+    image.save(image_buffer, format="JPEG")
+    with ZipFile(archive_path, "w") as archive:
+        archive.writestr(f"FSP{candidate_id}_div.jpg", image_buffer.getvalue())
+
+    embeddings_path = tmp_path / "embeddings.json"
+    embeddings_path.write_text(
+        json.dumps(
+            [
+                {
+                    "candidate_id": candidate_id,
+                    "election_year": 2026,
+                    "uf": "SP",
+                    "office": "federal_deputy",
+                    "number": "1144",
+                    "ballot_name": "CANDIDATO COM FOTO",
+                    "party": "ABC",
+                    "embedding": [1.0, 0.0],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    client = TestClient(
+        create_app(
+            Settings(
+                embeddings_path=embeddings_path,
+                database_url=f"sqlite:///{tmp_path / 'captures.sqlite3'}",
+                face_model="ArcFace",
+                face_detector="retinaface",
+                face_device="auto",
+                location_precision_decimals=3,
+                match_limit=5,
+                max_upload_bytes=7000000,
+                cors_origins=["*"],
+                candidate_photo_archives=(archive_path,),
+            )
+        )
+    )
+
+    response = client.post(
+        "/matches/embedding",
+        headers={"x-forwarded-proto": "https"},
+        json={"uf": "SP", "embedding": [1.0, 0.0], "limit": 1},
+    )
+
+    assert response.json()["matches"][0]["photo_url"] == (
+        f"https://testserver/candidate-photos/{candidate_id}"
+    )

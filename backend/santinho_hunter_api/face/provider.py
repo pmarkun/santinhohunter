@@ -9,6 +9,13 @@ class FaceEmbedding:
 
 
 @dataclass(frozen=True)
+class FaceAnalysis:
+    faces: list[FaceEmbedding]
+    detection_ms: float
+    embedding_ms: float
+
+
+@dataclass(frozen=True)
 class FaceProviderStatus:
     provider: str
     available: bool
@@ -24,3 +31,6 @@ class FaceProvider(Protocol):
 
     def represent_image_bytes(self, image_bytes: bytes) -> list[FaceEmbedding]:
         """Extract face embeddings from raw image bytes."""
+
+    def analyze_image_bytes(self, image_bytes: bytes) -> FaceAnalysis:
+        """Detect faces and report separate detection and embedding timings."""
