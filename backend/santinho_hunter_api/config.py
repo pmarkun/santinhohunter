@@ -16,6 +16,10 @@ class Settings:
     cors_origins: list[str]
     candidate_catalog_path: Path | None = None
     candidate_photo_archives: tuple[Path, ...] = ()
+    evidence_dir: Path = Path("backend/data/evidence")
+    admin_password: str = ""
+    admin_session_secret: str = ""
+    admin_session_ttl_seconds: int = 8 * 60 * 60
 
 
 def get_settings() -> Settings:
@@ -59,4 +63,10 @@ def get_settings() -> Settings:
             for origin in os.getenv("SANTINHO_CORS_ORIGINS", "*").split(",")
             if origin.strip()
         ],
+        evidence_dir=Path(os.getenv("SANTINHO_EVIDENCE_DIR", "backend/data/evidence")),
+        admin_password=os.getenv("SANTINHO_ADMIN_PASSWORD", ""),
+        admin_session_secret=os.getenv("SANTINHO_ADMIN_SESSION_SECRET", ""),
+        admin_session_ttl_seconds=int(
+            os.getenv("SANTINHO_ADMIN_SESSION_TTL_SECONDS", str(8 * 60 * 60))
+        ),
     )
