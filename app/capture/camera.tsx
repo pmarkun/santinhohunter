@@ -89,7 +89,7 @@ export default function CameraScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} />
+      <CameraView ref={cameraRef} style={styles.camera} />
 
       <SafeAreaView edges={['top']} style={styles.topControls}>
         <Pressable
@@ -142,6 +142,9 @@ const styles = StyleSheet.create({
   },
   container: {
     backgroundColor: colors.asphalt,
+    flex: 1,
+  },
+  camera: {
     flex: 1,
   },
   topControls: {
