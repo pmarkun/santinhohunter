@@ -7,6 +7,10 @@
     "start": "expo start",
     "android": "expo start --android",
     "web": "expo start --web",
+    "build:android": "scripts/build-android-artifact.sh",
+    "build:android:apk": "scripts/build-android-artifact.sh apk",
+    "build:android:aab": "scripts/build-android-artifact.sh aab",
+    "build:android:both": "scripts/build-android-artifact.sh both",
     "test": "jest",
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit"
