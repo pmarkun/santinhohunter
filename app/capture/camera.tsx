@@ -36,14 +36,14 @@ export default function CameraScreen() {
 
     try {
       const capturedAt = new Date().toISOString();
-      const [photo, location] = await Promise.all([
-        withTimeout(
-          cameraRef.current.takePictureAsync({ quality: 0.72 }),
-          10000,
-          'A câmera demorou demais para responder.',
-        ),
-        getCaptureLocation().catch((): CaptureLocation => ({ uf: 'SP' })),
-      ]);
+      const photo = await withTimeout(
+        cameraRef.current.takePictureAsync({ quality: 0.72 }),
+        10000,
+        'A câmera demorou demais para responder.',
+      );
+      const location = await getCaptureLocation().catch(
+        (): CaptureLocation => ({ uf: 'SP' }),
+      );
 
       if (!photo?.uri) {
         throw new Error('Não consegui salvar a foto.');
