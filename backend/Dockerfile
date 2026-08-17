@@ -5,6 +5,7 @@ ENV PYTHONPATH=/app
 ENV SANTINHO_EMBEDDINGS_PATH=data/candidate_embeddings.tse-2026.json
 ENV SANTINHO_CANDIDATES_PATH=data/candidates.tse-2026.json
 ENV SANTINHO_CANDIDATE_PHOTO_ARCHIVES=data/foto_cand2026_SP_div.zip,data/foto_cand2026_BR_div.zip
+ENV SANTINHO_EVIDENCE_DIR=/data/evidence
 
 WORKDIR /app
 
