@@ -7,6 +7,11 @@ import {
   saveCapture,
 } from '@/services/captureStorage';
 import type { SantinhoCapture } from '@/types/domain';
+import { clearCaptureEvidenceStorage } from '@/services/captureEvidenceStorage';
+
+jest.mock('@/services/captureEvidenceStorage', () => ({
+  clearCaptureEvidenceStorage: jest.fn(async () => undefined),
+}));
 
 const capture: SantinhoCapture = {
   id: 'cap-1',
@@ -52,6 +57,7 @@ describe('captureStorage', () => {
     await clearStoredCaptures();
 
     await expect(getStoredCaptures()).resolves.toEqual([]);
+    expect(clearCaptureEvidenceStorage).toHaveBeenCalled();
   });
 
   it('normalizes a legacy singular candidate as an identified candidate', async () => {

@@ -3,6 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getStoredCaptures, saveCapture } from '@/services/captureStorage';
 import { syncPendingCaptures } from '@/services/syncService';
 import type { SantinhoCapture } from '@/types/domain';
+import { getCaptureEvidence } from '@/services/captureEvidenceStorage';
+
+jest.mock('@/services/captureEvidenceStorage', () => ({
+  clearCaptureEvidenceStorage: jest.fn(async () => undefined),
+  getCaptureEvidence: jest.fn(async () => new Blob(['jpeg'], { type: 'image/jpeg' })),
+}));
 
 const confirmedCapture: SantinhoCapture = {
   id: 'cap-sync-1',
@@ -84,6 +90,43 @@ describe('syncService', () => {
     expect(payload.selected_candidates).toEqual([
       expect.objectContaining({ candidate_id: '250002052120', face_id: 'face-0' }),
       expect.objectContaining({ candidate_id: 'candidate-2', face_id: 'face-1' }),
+    ]);
+  });
+
+  it('only syncs a new capture after uploading its evidence', async () => {
+    await saveCapture({
+      ...confirmedCapture,
+      evidenceRequired: true,
+      evidenceUri: 'file:///persistent/cap-sync-1.jpg',
+    });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: jest.fn(async () => ({ id: 'server-id', sync_status: 'synced' })),
+    } as unknown as Response);
+
+    await syncPendingCaptures();
+
+    expect(getCaptureEvidence).toHaveBeenCalledWith('file:///persistent/cap-sync-1.jpg');
+    expect(fetchMock.mock.calls[0]?.[0]).toContain('/captures/with-evidence');
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(request.body).toBeInstanceOf(FormData);
+    await expect(getStoredCaptures()).resolves.toEqual([
+      expect.objectContaining({ syncStatus: 'synced' }),
+    ]);
+  });
+
+  it('keeps required evidence pending when the local photo is missing', async () => {
+    jest.mocked(getCaptureEvidence).mockRejectedValueOnce(new Error('missing'));
+    await saveCapture({
+      ...confirmedCapture,
+      evidenceRequired: true,
+      evidenceUri: 'file:///missing.jpg',
+    });
+
+    await syncPendingCaptures();
+
+    await expect(getStoredCaptures()).resolves.toEqual([
+      expect.objectContaining({ syncStatus: 'sync_failed' }),
     ]);
   });
 });
