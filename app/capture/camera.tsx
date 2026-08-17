@@ -36,27 +36,20 @@ export default function CameraScreen() {
 
     try {
       const capturedAt = new Date().toISOString();
-      const photo = await withTimeout(
-        cameraRef.current.takePictureAsync({ base64: true, quality: 0.72 }),
-        10000,
-        'A câmera demorou demais para responder.',
-      );
-      const location = await getCaptureLocation().catch(
-        (): CaptureLocation => ({ uf: 'SP' }),
-      );
+      const [photo, location] = await Promise.all([
+        withTimeout(
+          cameraRef.current.takePictureAsync({ quality: 0.72 }),
+          10000,
+          'A câmera demorou demais para responder.',
+        ),
+        getCaptureLocation().catch((): CaptureLocation => ({ uf: 'SP' })),
+      ]);
 
       if (!photo?.uri) {
         throw new Error('Não consegui salvar a foto.');
       }
 
-      setCaptureDraft({
-        photoUri: photo.uri,
-        previewUri: photo.base64
-          ? `data:image/${photo.format};base64,${photo.base64}`
-          : photo.uri,
-        location,
-        capturedAt,
-      });
+      setCaptureDraft({ photoUri: photo.uri, location, capturedAt });
       router.push('/capture/review');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não consegui capturar agora.');
@@ -96,7 +89,7 @@ export default function CameraScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <CameraView ref={cameraRef} style={styles.camera} />
+      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} />
 
       <SafeAreaView edges={['top']} style={styles.topControls}>
         <Pressable
@@ -149,9 +142,6 @@ const styles = StyleSheet.create({
   },
   container: {
     backgroundColor: colors.asphalt,
-    flex: 1,
-  },
-  camera: {
     flex: 1,
   },
   topControls: {

@@ -259,11 +259,7 @@ export default function CaptureReviewScreen() {
       top={<FlowTopBar onBack={() => router.back()} status="local" title="Identificar" />}
     >
       <View style={[styles.previewWrap, { height: imageHeight }]}>
-        <Image
-          resizeMode="cover"
-          source={{ uri: draft.previewUri ?? draft.photoUri }}
-          style={styles.preview}
-        />
+        <Image resizeMode="cover" source={{ uri: draft.photoUri }} style={styles.preview} />
         {faces.map((face, index) =>
           face.boundingBox ? (
             <View
