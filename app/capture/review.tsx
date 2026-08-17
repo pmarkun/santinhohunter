@@ -88,7 +88,11 @@ export default function CaptureReviewScreen() {
       setCaptureDraftActiveFace(nextFaces[0]?.faceId ?? 'face-0');
       setState('match_found');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'O detector tropeçou agora.');
+      const message =
+        err instanceof Error && !err.message.includes('Unsupported FormDataPart')
+          ? err.message
+          : 'Não consegui enviar essa foto para análise. Tente tirar outra ou busque pelo número.';
+      setError(message);
       setState('match_error');
     }
   }, []);

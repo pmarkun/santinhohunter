@@ -91,7 +91,10 @@ async function appendPhoto(body: FormData, photoUri: string): Promise<void> {
     return;
   }
 
-  body.append('file', new File(photoUri), 'santinho.jpg');
+  const file = new File(photoUri);
+  const bytes = await file.bytes();
+  const blob = new Blob([bytes], { type: 'image/jpeg' });
+  body.append('file', blob, 'santinho.jpg');
 }
 
 function apiCandidateToCandidate(candidate: ApiMatchCandidate, uf: Uf): MatchedCandidate {
