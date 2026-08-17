@@ -117,7 +117,7 @@ export function LandingPage({ canInstall = false, onInstall }: LandingPageProps)
         <meta content="https://santinhohunter.com.br/" property="og:url" />
         <meta content="website" property="og:type" />
         <meta
-          content="https://santinhohunter.com.br/assets/landing-hero.jpg"
+          content="https://santinhohunter.com.br/og-santinho-hunter.jpg"
           property="og:image"
         />
         <meta content="summary_large_image" name="twitter:card" />

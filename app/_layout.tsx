@@ -12,6 +12,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <Head>
+          <title>Santinho Hunter</title>
           <meta content="#FFD400" name="theme-color" />
           <link href="/manifest.webmanifest" rel="manifest" />
           <link href="/icon-192.png" rel="apple-touch-icon" />
