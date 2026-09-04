@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import runpy
 
 from santinho_hunter_api.tse.embeddings import convert_tse_embedding_jsonl, office_from_tse_label
 
@@ -46,3 +47,16 @@ def test_convert_tse_embedding_jsonl_writes_api_format(tmp_path: Path) -> None:
         "party": "REDE",
         "embedding": [0.1, 0.2],
     }
+
+
+def test_embedding_generator_keeps_going_after_provider_failure() -> None:
+    namespace = runpy.run_path("scripts/generate-tse-face-embeddings.py")
+
+    class FailingProvider:
+        def represent_image_bytes(self, _image_bytes: bytes):
+            raise ValueError("face not detected")
+
+    embeddings, error = namespace["represent_safely"](FailingProvider(), b"image")
+
+    assert embeddings == []
+    assert isinstance(error, ValueError)

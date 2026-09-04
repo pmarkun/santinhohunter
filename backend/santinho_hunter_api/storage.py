@@ -9,16 +9,45 @@ class CandidateEmbeddingStore:
         self.path = path
         self.candidate_catalog_path = candidate_catalog_path
         self._cache: list[CandidateEmbedding] | None = None
+        self._partition_cache: dict[str, list[CandidateEmbedding]] = {}
         self._catalog_cache: list[CandidateResponse] | None = None
 
     def all(self) -> list[CandidateEmbedding]:
+        if self.path.is_dir():
+            return [
+                candidate
+                for partition in self.partition_names()
+                for candidate in self._load_partition(partition)
+            ]
+
         if self._cache is None:
             self._cache = self._load()
 
         return self._cache
 
     def count(self) -> int:
+        if self.path.is_dir():
+            return sum(len(self._load_partition(uf)) for uf in self.partition_names())
         return len(self.all())
+
+    def partition_names(self) -> list[str]:
+        if not self.path.is_dir():
+            return []
+        return sorted(path.stem for path in self.path.glob("*.json"))
+
+    def for_uf(self, uf: str) -> list[CandidateEmbedding]:
+        normalized_uf = normalize_uf(uf)
+        if not self.path.is_dir():
+            return [
+                candidate
+                for candidate in self.all()
+                if candidate.uf in {normalized_uf, "BR"}
+            ]
+
+        candidates = list(self._load_partition(normalized_uf))
+        if normalized_uf != "BR":
+            candidates += self._load_partition("BR")
+        return candidates
 
     def find(self, candidate_id: str) -> CandidateEmbedding | None:
         return next(
@@ -80,6 +109,23 @@ class CandidateEmbeddingStore:
             raw = json.load(file)
 
         return [CandidateEmbedding.model_validate(item) for item in raw]
+
+    def _load_partition(self, partition: str) -> list[CandidateEmbedding]:
+        normalized_partition = partition.strip().upper()
+        if normalized_partition in self._partition_cache:
+            return self._partition_cache[normalized_partition]
+
+        path = self.path / f"{normalized_partition}.json"
+        if not path.exists():
+            self._partition_cache[normalized_partition] = []
+            return []
+
+        with path.open("r", encoding="utf-8") as file:
+            raw = json.load(file)
+
+        candidates = [CandidateEmbedding.model_validate(item) for item in raw]
+        self._partition_cache[normalized_partition] = candidates
+        return candidates
 
     def catalog(self) -> list[CandidateResponse]:
         if self._catalog_cache is None:

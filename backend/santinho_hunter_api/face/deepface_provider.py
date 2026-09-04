@@ -94,7 +94,7 @@ class DeepFaceProvider:
         except Exception as exc:  # pragma: no cover - depends on optional runtime
             self._load_error = str(exc)
             raise DeepFaceUnavailableError(
-                "DeepFace is not installed in this environment. Install backend[deepface]."
+                f"DeepFace import failed ({type(exc).__name__}): {exc}"
             ) from exc
 
         self._deepface = DeepFace

@@ -47,11 +47,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     settings = app_settings or get_settings()
     store = CandidateEmbeddingStore(settings.embeddings_path, settings.candidate_catalog_path)
     photo_store = CandidatePhotoStore(settings.candidate_photo_archives)
-    candidates_with_photos = [
-        candidate for candidate in store.all() if photo_store.has(candidate.candidate_id)
-    ]
-    match_candidates = candidates_with_photos or store.all()
-    matcher = CandidateMatcher(match_candidates)
+    matchers: dict[str, CandidateMatcher] = {}
     capture_store = CaptureStore(settings.database_url, settings.location_precision_decimals)
     capture_store.ensure_schema()
     evidence_store = EvidenceStore(
@@ -71,6 +67,16 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     )
     face_queue = BoundedSemaphore(1)
     warmup_photo = photo_store.first()
+
+    def matcher_for_uf(uf: str) -> CandidateMatcher:
+        normalized_uf = normalize_uf(uf)
+        if normalized_uf not in matchers:
+            candidates = store.for_uf(normalized_uf)
+            candidates_with_photos = [
+                candidate for candidate in candidates if photo_store.has(candidate.candidate_id)
+            ]
+            matchers[normalized_uf] = CandidateMatcher(candidates_with_photos or candidates)
+        return matchers[normalized_uf]
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -175,13 +181,13 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
             face_provider=status.provider,
             face_available=status.available,
             face_device=status.device,
-            embeddings_count=len(match_candidates),
+            embeddings_count=store.count(),
         )
 
     @app.post("/matches/embedding", response_model=MatchResponse)
     def match_embedding(payload: EmbeddingMatchRequest, request: Request) -> MatchResponse:
         matches = _matches_with_photos(
-            matcher.rank(
+            matcher_for_uf(payload.uf).rank(
                 payload.embedding,
                 uf=payload.uf,
                 office=payload.office,
@@ -241,7 +247,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
         faces = []
         for index, face_embedding in enumerate(analysis.faces):
             face_matches = _matches_with_photos(
-                matcher.rank(
+                matcher_for_uf(uf).rank(
                     face_embedding.embedding,
                     uf=uf,
                     office=office,

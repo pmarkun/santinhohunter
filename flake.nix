@@ -25,6 +25,12 @@
           shellHook = ''
             export PYTHONPATH="$PWD/backend:$PYTHONPATH"
             export TF_FORCE_GPU_ALLOW_GROWTH="''${TF_FORCE_GPU_ALLOW_GROWTH:-true}"
+            export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
+              pkgs.glib
+              pkgs.libglvnd
+              pkgs.stdenv.cc.cc.lib
+              pkgs.zlib
+            ]}:''${LD_LIBRARY_PATH:-}"
 
             if [ -d /run/opengl-driver/lib ]; then
               export LD_LIBRARY_PATH="/run/opengl-driver/lib:''${LD_LIBRARY_PATH:-}"
@@ -43,6 +49,10 @@
               pkgs.nodejs_24
               pkgs.watchman
               pkgs.git
+              pkgs.glib
+              pkgs.libglvnd
+              pkgs.stdenv.cc.cc.lib
+              pkgs.zlib
               backendPython
               pkgs.uv
             ];
