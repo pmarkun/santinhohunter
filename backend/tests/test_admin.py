@@ -55,6 +55,12 @@ def jpeg_with_exif() -> bytes:
     return output.getvalue()
 
 
+def png_evidence() -> bytes:
+    output = BytesIO()
+    Image.new("RGB", (640, 480), "yellow").save(output, format="PNG")
+    return output.getvalue()
+
+
 def login(client: TestClient) -> dict[str, str]:
     response = client.post("/admin/session", json={"password": "correct horse"})
     assert response.status_code == 200
@@ -119,6 +125,21 @@ def test_invalid_evidence_does_not_create_capture(tmp_path: Path) -> None:
     assert response.status_code == 422
     with sqlite3.connect(database_path) as connection:
         assert connection.execute("SELECT COUNT(*) FROM captures").fetchone()[0] == 0
+
+
+def test_png_evidence_is_sanitized_to_jpeg(tmp_path: Path) -> None:
+    client, _, evidence_dir = make_client(tmp_path)
+    response = client.post(
+        "/captures/with-evidence",
+        data={"payload": __import__("json").dumps(capture_payload("png-capture"))},
+        files={"file": ("street.png", png_evidence(), "image/png")},
+    )
+
+    assert response.status_code == 200
+    stored_files = list(evidence_dir.glob("*.jpg"))
+    assert len(stored_files) == 1
+    with Image.open(stored_files[0]) as image:
+        assert image.format == "JPEG"
 
 
 def test_admin_list_filters_and_marks_legacy_evidence_missing(tmp_path: Path) -> None:

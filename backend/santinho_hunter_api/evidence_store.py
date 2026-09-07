@@ -69,8 +69,8 @@ class EvidenceStore:
     def _sanitize(self, content: bytes) -> bytes:
         try:
             with Image.open(BytesIO(content)) as source:
-                if source.format != "JPEG":
-                    raise InvalidEvidenceError("A evidência deve ser uma imagem JPEG")
+                if source.format not in {"JPEG", "PNG"}:
+                    raise InvalidEvidenceError("A evidência deve ser uma imagem JPEG ou PNG")
                 width, height = source.size
                 if width <= 0 or height <= 0 or width * height > self.max_pixels:
                     raise InvalidEvidenceError("A evidência excede as dimensões permitidas")
