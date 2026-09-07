@@ -13,16 +13,15 @@ Este repo usa dois servicos Railway apontando para o mesmo repositorio.
 - Variaveis:
   - `DATABASE_URL=${{Postgres.DATABASE_URL}}`
   - `SANTINHO_CANDIDATES_PATH=data/candidates.tse-2026.json`
-  - `SANTINHO_EMBEDDINGS_PATH=data/candidate_embeddings.tse-2026.json`
+  - `SANTINHO_EMBEDDINGS_PATH=data/embeddings/2026`
   - `SANTINHO_CORS_ORIGINS=https://seu-pwa.up.railway.app`
   - `SANTINHO_FACE_DEVICE=auto`
   - `SANTINHO_FACE_MODEL=ArcFace`
   - `SANTINHO_FACE_DETECTOR=retinaface`
 
 O catalogo versionado `backend/data/candidates.tse-2026.json` alimenta busca
-manual e ranking com o snapshot TSE 2026 de SP + Presidência. O arquivo
-versionado `backend/data/candidate_embeddings.tse-2026.json` alimenta o match
-facial real para os mesmos candidatos.
+manual e ranking. O diretório versionado `backend/data/embeddings/2026/`
+alimenta o match por UF, sempre incluindo a partição `BR` da Presidência.
 
 Para configurar a API para builds via GitHub em monorepo:
 

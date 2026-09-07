@@ -22,6 +22,10 @@ def write_candidates_zip(path: Path) -> None:
             "consulta_cand_2026_BRASIL.csv",
             header + "2026;1;BR;PRESIDENTE;280000000001;80;PRESIDENTA;PRESIDENTA TESTE;PDT\n",
         )
+        archive.writestr(
+            "consulta_cand_2026_RJ.csv",
+            header + "2026;1;RJ;GOVERNADOR;190000000001;15;PESSOA RJ;PESSOA DO RIO;PDT\n",
+        )
 
 
 def test_build_candidate_catalog_filters_general_election_offices(tmp_path: Path) -> None:
@@ -55,3 +59,13 @@ def test_write_candidate_catalog_outputs_json(tmp_path: Path) -> None:
     assert count == 2
     assert payload["metadata"]["source"] == "Tribunal Superior Eleitoral"
     assert len(payload["candidates"]) == 2
+
+
+def test_build_candidate_catalog_accepts_multiple_ufs(tmp_path: Path) -> None:
+    zip_path = tmp_path / "consulta_cand_2026.zip"
+    write_candidates_zip(zip_path)
+
+    catalog = build_candidate_catalog(candidates_zip_path=zip_path, year=2026, ufs=["SP", "RJ"])
+
+    assert catalog["metadata"]["ufs"] == ["RJ", "SP"]
+    assert catalog["metadata"]["by_uf"] == {"BR": 1, "RJ": 1, "SP": 1}

@@ -31,15 +31,25 @@ nix develop --command bash scripts/setup-face-env.sh gpu
 SANTINHO_FACE_ENV=gpu SANTINHO_FACE_DEVICE=gpu nix develop --command bash scripts/run-face-backend.sh
 ```
 
-Para gerar embeddings dos candidatos do TSE com GPU e resume:
+Para importar o catálogo nacional e gerar embeddings particionados, estado por estado,
+com GPU quando disponível e retomada automática:
 
 ```sh
-nix develop --command bash -lc 'source scripts/face-runtime-env.sh && .venv-gpu/bin/python scripts/generate-tse-face-embeddings.py --cache-dir /home/markun/.cache/vote-nelas-tse-2026 --device gpu'
+nix develop --command bash scripts/build-national-embeddings.sh
 ```
 
-O gerador grava incrementalmente em `backend/data/tse/2026/face_embeddings.jsonl`.
-Se o processo parar, rode o mesmo comando novamente para continuar. Use
-`--compact-only` para gerar um JSON compacto parcial testável sem rodar DeepFace.
+O runner grava um JSONL incremental, status e logs em
+`~/.cache/santinhohunter/tse-2026/national-embeddings/`. Para acompanhar ou repetir
+uma UF específica:
+
+```sh
+nix develop --command bash scripts/build-national-embeddings.sh --status
+nix develop --command bash scripts/build-national-embeddings.sh --only RJ
+```
+
+Os arquivos publicados ficam em `backend/data/embeddings/2026/{UF}.json`, com
+`BR.json` reservado à Presidência. O backend carrega somente a UF selecionada e
+`BR` para cada match; imagens e ZIPs continuam no cache local.
 
 A política de dispositivo é:
 
@@ -51,7 +61,7 @@ Variáveis úteis:
 
 - `SANTINHO_FACE_MODEL=ArcFace`
 - `SANTINHO_FACE_DETECTOR=retinaface`
-- `SANTINHO_EMBEDDINGS_PATH=backend/data/candidate_embeddings.tse-2026.json`
+- `SANTINHO_EMBEDDINGS_PATH=backend/data/embeddings/2026`
 - `SANTINHO_CORS_ORIGINS=*`
 
 ## Fotos Do TSE
@@ -60,10 +70,10 @@ Os zips de fotos do TSE sao grandes e nao devem ser extraidos dentro do repo.
 Gere o catalogo versionado de candidatos e manifestos locais de fotos:
 
 ```sh
-nix develop --command python scripts/import-tse-candidates.py --ufs SP
+nix develop --command python scripts/import-tse-candidates.py --ufs all --skip-photos
 ```
 
 O catalogo compacto fica em `backend/data/candidates.tse-2026.json` e entra no
-deploy. Os embeddings faciais completos para SP + Presidência ficam em
-`backend/data/candidate_embeddings.tse-2026.json`. Zips, manifestos e JSONL
+deploy. Os embeddings faciais ficam particionados em
+`backend/data/embeddings/2026/`. Zips, manifestos e JSONL
 incremental de fotos ficam em `backend/data/tse/` e seguem fora do Git.

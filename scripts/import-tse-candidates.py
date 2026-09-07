@@ -9,7 +9,13 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "backend"))
 
-from santinho_hunter_api.tse.candidates import TSE_CANDIDATES_URL, TSE_PHOTOS_URL, download, write_candidate_catalog
+from santinho_hunter_api.tse.candidates import (
+    ELECTION_UFS,
+    TSE_CANDIDATES_URL,
+    TSE_PHOTOS_URL,
+    download,
+    write_candidate_catalog,
+)
 from santinho_hunter_api.tse.photos import write_photo_manifest
 
 
@@ -18,7 +24,9 @@ def parse_args() -> argparse.Namespace:
         description="Download official TSE 2026 candidate data and build Santinho Hunter catalog files."
     )
     parser.add_argument("--year", type=int, default=2026)
-    parser.add_argument("--ufs", nargs="+", default=["SP"], help="UFs to import, for example: SP RJ")
+    parser.add_argument(
+        "--ufs", nargs="+", default=["SP"], help="UFs to import, or 'all' for the 27 UFs"
+    )
     parser.add_argument(
         "--cache-dir",
         type=Path,
@@ -41,7 +49,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     args.cache_dir.mkdir(parents=True, exist_ok=True)
-    ufs = [uf.strip().upper() for uf in args.ufs]
+    ufs = list(ELECTION_UFS) if any(uf.strip().lower() == "all" for uf in args.ufs) else [
+        uf.strip().upper() for uf in args.ufs
+    ]
 
     candidates_zip = download(
         TSE_CANDIDATES_URL.format(year=args.year),

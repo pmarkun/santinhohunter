@@ -16,7 +16,7 @@ from santinho_hunter_api.tse.embeddings import office_from_tse_label
 
 
 TSE_CANDIDATES_URL = "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{year}.zip"
-TSE_PHOTOS_URL = "https://cdn.tse.jus.br/estatistica/sead/odsele/foto_cand/foto_cand{year}_{uf}_div.zip"
+TSE_PHOTOS_URL = "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_{uf}_div.zip"
 GENERAL_ELECTION_OFFICES = {
     "PRESIDENTE",
     "GOVERNADOR",
@@ -25,6 +25,11 @@ GENERAL_ELECTION_OFFICES = {
     "DEPUTADO ESTADUAL",
     "DEPUTADO DISTRITAL",
 }
+ELECTION_UFS = (
+    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT",
+    "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO",
+    "RR", "SC", "SP", "SE", "TO",
+)
 
 
 def download(url: str, destination: Path) -> Path:
@@ -46,7 +51,14 @@ def download(url: str, destination: Path) -> Path:
     )
     ssl_context = ssl.create_default_context(cafile=str(ca_file) if ca_file else None)
 
-    with urllib.request.urlopen(url, context=ssl_context) as response, temporary.open("wb") as output:
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/zip, application/octet-stream;q=0.9, */*;q=0.1",
+            "User-Agent": "SantinhoHunter/2026 (+https://santinhohunter.com.br/sobre)",
+        },
+    )
+    with urllib.request.urlopen(request, context=ssl_context) as response, temporary.open("wb") as output:
         while chunk := response.read(1024 * 1024):
             output.write(chunk)
 

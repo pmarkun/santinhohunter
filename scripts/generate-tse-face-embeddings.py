@@ -14,6 +14,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "backend"))
 
 from santinho_hunter_api.face.deepface_provider import DeepFaceProvider
+from santinho_hunter_api.face.provider import FaceEmbedding
 from santinho_hunter_api.models import CandidateResponse
 from santinho_hunter_api.tse.candidates import TSE_PHOTOS_URL, download
 from santinho_hunter_api.tse.photos import parse_photo_name
@@ -47,7 +48,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ufs", nargs="+", default=["SP", "BR"])
     parser.add_argument("--model", default=os.getenv("SANTINHO_FACE_MODEL", "ArcFace"))
     parser.add_argument("--detector", default=os.getenv("SANTINHO_FACE_DETECTOR", "retinaface"))
-    parser.add_argument("--device", default=os.getenv("SANTINHO_FACE_DEVICE", "cpu"))
+    parser.add_argument("--device", default=os.getenv("SANTINHO_FACE_DEVICE", "auto"))
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--no-resume", action="store_true")
     parser.add_argument(
@@ -108,6 +109,15 @@ def write_compact_json(jsonl_path: Path, output_path: Path) -> int:
     return len(embeddings)
 
 
+def represent_safely(
+    provider: DeepFaceProvider, image_bytes: bytes
+) -> tuple[list[FaceEmbedding], Exception | None]:
+    try:
+        return provider.represent_image_bytes(image_bytes), None
+    except Exception as exc:  # pragma: no cover - provider failures depend on model runtime
+        return [], exc
+
+
 def main() -> None:
     args = parse_args()
 
@@ -125,10 +135,13 @@ def main() -> None:
         detector_backend=args.detector,
         device_policy=args.device,
     )
+    provider_status = provider.status()
     print(
         f"provider={provider.provider_name} model={args.model} detector={args.detector} "
-        f"device={provider.status().device} resume={len(done)}"
+        f"device={provider_status.device} resume={len(done)}"
     )
+    if not provider_status.available:
+        raise RuntimeError(provider_status.detail or "DeepFace provider is unavailable")
 
     processed = 0
     written = 0
@@ -161,11 +174,17 @@ def main() -> None:
                         image_path = Path(image_file.name)
 
                     try:
-                        image_bytes = image_path.read_bytes()
-                        embeddings = provider.represent_image_bytes(image_bytes)
-                    except Exception as exc:  # pragma: no cover - depends on image/model runtime
+                        embeddings, error = represent_safely(provider, image_path.read_bytes())
+                        if error is not None:
+                            failures += 1
+                            print(
+                                f"failed {candidate_sequence} {candidate.ballot_name}: {error}",
+                                file=sys.stderr,
+                            )
+                    except Exception as exc:  # pragma: no cover - depends on local filesystem
                         failures += 1
                         print(f"failed {candidate_sequence} {candidate.ballot_name}: {exc}", file=sys.stderr)
+                        embeddings = []
                     finally:
                         image_path.unlink(missing_ok=True)
 
