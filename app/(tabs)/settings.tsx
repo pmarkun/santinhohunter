@@ -1,12 +1,13 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type Href, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CompactTopBar } from '@/components/CompactTopBar';
 import { UfPickerModal } from '@/components/UfPickerModal';
 import { clearStoredCaptures } from '@/services/captureStorage';
+import { detectCurrentUf } from '@/services/locationService';
 import { getStoredUf, saveStoredUf } from '@/services/ufService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/layout';
@@ -16,6 +17,8 @@ import type { Uf } from '@/types/domain';
 export default function SettingsScreen() {
   const [uf, setUf] = useState<Uf>('SP');
   const [ufPickerVisible, setUfPickerVisible] = useState(false);
+  const [detectingUf, setDetectingUf] = useState(false);
+  const [locationMessage, setLocationMessage] = useState<string | null>(null);
 
   useEffect(() => {
     getStoredUf().then(setUf);
@@ -25,6 +28,24 @@ export default function SettingsScreen() {
     setUf(nextUf);
     setUfPickerVisible(false);
     await saveStoredUf(nextUf);
+  }
+
+  async function useCurrentLocation() {
+    setDetectingUf(true);
+    setLocationMessage(null);
+    try {
+      const detectedUf = await detectCurrentUf();
+      await selectUf(detectedUf);
+      setLocationMessage(`Localização encontrada: ${detectedUf}.`);
+    } catch (error) {
+      setLocationMessage(
+        error instanceof Error
+          ? error.message
+          : 'Não consegui identificar seu estado pela localização.',
+      );
+    } finally {
+      setDetectingUf(false);
+    }
   }
 
   function confirmClearHistory() {
@@ -49,6 +70,27 @@ export default function SettingsScreen() {
               <Text style={styles.changeLabel}>Trocar UF</Text>
               <MaterialCommunityIcons color={colors.asphalt} name="chevron-right" size={24} />
             </Pressable>
+            <Pressable
+              accessibilityLabel="Usar minha localização para escolher a UF"
+              accessibilityRole="button"
+              disabled={detectingUf}
+              onPress={useCurrentLocation}
+              style={({ pressed }) => [
+                styles.locationButton,
+                pressed && styles.pressed,
+                detectingUf && styles.disabled,
+              ]}
+            >
+              {detectingUf ? (
+                <ActivityIndicator color={colors.asphalt} />
+              ) : (
+                <MaterialCommunityIcons color={colors.asphalt} name="crosshairs-gps" size={21} />
+              )}
+              <Text style={styles.locationButtonLabel}>
+                {detectingUf ? 'Localizando...' : 'Usar minha localização'}
+              </Text>
+            </Pressable>
+            {locationMessage ? <Text style={styles.locationMessage}>{locationMessage}</Text> : null}
           </Section>
 
           <Section title="Permissões">
@@ -113,6 +155,11 @@ const styles = StyleSheet.create({
   ufRow: { alignItems: 'center', flexDirection: 'row', minHeight: 58 },
   uf: { color: colors.asphalt, flex: 1, fontFamily: fontFamilies.display, fontSize: 40, fontWeight: '900' },
   changeLabel: { color: colors.asphalt, fontFamily: fontFamilies.display, fontSize: 15, fontWeight: '900', textTransform: 'uppercase' },
+  locationButton: { alignItems: 'center', backgroundColor: colors.alert, borderRadius: 8, flexDirection: 'row', gap: spacing.sm, justifyContent: 'center', minHeight: 52, paddingHorizontal: spacing.lg },
+  locationButtonLabel: { color: colors.asphalt, fontFamily: fontFamilies.display, fontSize: 15, fontWeight: '900', textTransform: 'uppercase' },
+  locationMessage: { color: colors.steel, fontSize: 14, fontWeight: '700', marginTop: spacing.sm },
+  pressed: { opacity: 0.72 },
+  disabled: { opacity: 0.6 },
   linkRow: { alignItems: 'center', borderTopColor: colors.line, borderTopWidth: 1, flexDirection: 'row', minHeight: 52 },
   linkLabel: { color: colors.asphalt, flex: 1, fontFamily: fontFamilies.display, fontSize: 16, fontWeight: '900', textTransform: 'uppercase' },
   dangerButton: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm, justifyContent: 'center', minHeight: 58, marginTop: spacing.xl },

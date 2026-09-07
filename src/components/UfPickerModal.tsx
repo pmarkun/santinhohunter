@@ -1,8 +1,18 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { detectCurrentUf } from '@/services/locationService';
 import { ufs } from '@/services/ufService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/layout';
@@ -17,6 +27,25 @@ type UfPickerModalProps = {
 };
 
 export function UfPickerModal({ activeUf, onClose, onSelect, visible }: UfPickerModalProps) {
+  const [detectingUf, setDetectingUf] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  async function selectCurrentUf() {
+    setDetectingUf(true);
+    setLocationError(null);
+    try {
+      onSelect(await detectCurrentUf());
+    } catch (error) {
+      setLocationError(
+        error instanceof Error
+          ? error.message
+          : 'Não consegui identificar seu estado pela localização.',
+      );
+    } finally {
+      setDetectingUf(false);
+    }
+  }
+
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
       <SafeAreaView style={styles.safeArea}>
@@ -26,7 +55,30 @@ export function UfPickerModal({ activeUf, onClose, onSelect, visible }: UfPicker
             <MaterialCommunityIcons color={colors.asphalt} name="close" size={27} />
           </Pressable>
         </View>
-        <Text style={styles.body}>O ranking e a busca de candidatos usam a UF escolhida.</Text>
+        <Text style={styles.body}>
+          O ranking, a busca e o reconhecimento sempre usam a UF escolhida.
+        </Text>
+        <Pressable
+          accessibilityLabel="Usar minha localização para escolher a UF"
+          accessibilityRole="button"
+          disabled={detectingUf}
+          onPress={selectCurrentUf}
+          style={({ pressed }) => [
+            styles.locationButton,
+            pressed && styles.pressed,
+            detectingUf && styles.disabled,
+          ]}
+        >
+          {detectingUf ? (
+            <ActivityIndicator color={colors.asphalt} />
+          ) : (
+            <MaterialCommunityIcons color={colors.asphalt} name="crosshairs-gps" size={21} />
+          )}
+          <Text style={styles.locationLabel}>
+            {detectingUf ? 'Localizando...' : 'Usar minha localização'}
+          </Text>
+        </Pressable>
+        {locationError ? <Text style={styles.locationError}>{locationError}</Text> : null}
         <ScrollView contentContainerStyle={styles.grid}>
           {ufs.map((uf) => (
             <Pressable
@@ -74,6 +126,31 @@ const styles = StyleSheet.create({
   },
   close: { alignItems: 'center', height: 48, justifyContent: 'center', width: 48 },
   body: { color: colors.steel, fontSize: 15, fontWeight: '600', lineHeight: 21, paddingVertical: spacing.lg },
+  locationButton: {
+    alignItems: 'center',
+    backgroundColor: colors.alert,
+    borderRadius: 8,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: spacing.lg,
+  },
+  locationLabel: {
+    color: colors.asphalt,
+    fontFamily: fontFamilies.display,
+    fontSize: 15,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  locationError: {
+    color: colors.red,
+    fontSize: 14,
+    fontWeight: '700',
+    paddingTop: spacing.sm,
+  },
+  pressed: { opacity: 0.72 },
+  disabled: { opacity: 0.6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingBottom: spacing.xl },
   ufButton: {
     alignItems: 'center',

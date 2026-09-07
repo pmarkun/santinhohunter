@@ -54,12 +54,12 @@ describe('matchService', () => {
 
     const matches = await matchSantinhoPhoto({
       photoUri: 'file:///tmp/santinho.jpg',
-      uf: 'SP',
+      uf: 'SC',
       office: 'councilor',
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://api.example.test/matches?uf=SP&office=councilor',
+      'https://api.example.test/matches?uf=SC&office=councilor',
       expect.objectContaining({ method: 'POST' }),
     );
     const [, request] = fetchMock.mock.calls[0];
@@ -71,7 +71,7 @@ describe('matchService', () => {
     expect(matches[0]).toEqual({
       id: '250002052120',
       electionYear: 2024,
-      uf: 'SP',
+      uf: 'SC',
       office: 'councilor',
       number: '18888',
       ballotName: 'PEDRO DA IA',

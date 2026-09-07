@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { CaptureAction } from '@/components/CaptureAction';
@@ -22,27 +22,29 @@ export default function HuntScreen() {
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [ufPickerVisible, setUfPickerVisible] = useState(false);
 
-  useEffect(() => {
-    let active = true;
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
 
-    async function loadHome() {
-      const storedUf = await getStoredUf();
-      const [, entries] = await Promise.all([
-        syncPendingCaptures(),
-        fetchPublicRanking({ uf: storedUf, office: 'federal_deputy' }),
-      ]);
+      async function loadHome() {
+        const storedUf = await getStoredUf();
+        const [, entries] = await Promise.all([
+          syncPendingCaptures(),
+          fetchPublicRanking({ uf: storedUf, office: 'federal_deputy' }),
+        ]);
 
-      if (active) {
-        setUf(storedUf);
-        setRanking(entries);
+        if (active) {
+          setUf(storedUf);
+          setRanking(entries);
+        }
       }
-    }
 
-    loadHome();
-    return () => {
-      active = false;
-    };
-  }, []);
+      loadHome();
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   const leader = ranking[0];
   const total = useMemo(

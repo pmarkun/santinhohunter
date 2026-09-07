@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 
-import { getDefaultUf, normalizeUf } from '@/services/ufService';
+import { normalizeUf } from '@/services/ufService';
 import type { Uf } from '@/types/domain';
 
 export type CaptureLocation = {
@@ -9,6 +9,11 @@ export type CaptureLocation = {
   accuracy?: number;
   uf: Uf;
   city?: string;
+};
+
+type ResolvedLocation = {
+  address?: Location.LocationGeocodedAddress;
+  position: Location.LocationObject;
 };
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
@@ -24,11 +29,11 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   });
 }
 
-export async function getCaptureLocation(): Promise<CaptureLocation> {
+async function resolveCurrentLocation(): Promise<ResolvedLocation> {
   const permission = await withTimeout(Location.requestForegroundPermissionsAsync(), 5000);
 
   if (permission.status !== 'granted') {
-    return { uf: getDefaultUf() };
+    throw new Error('Location permission denied');
   }
 
   const position = await withTimeout(
@@ -46,12 +51,36 @@ export async function getCaptureLocation(): Promise<CaptureLocation> {
     4000,
   ).catch(() => []);
 
-  const uf = normalizeUf(address?.region) ?? getDefaultUf();
+  return {
+    position,
+    ...(address ? { address } : {}),
+  };
+}
+
+export async function detectCurrentUf(): Promise<Uf> {
+  const { address } = await resolveCurrentLocation();
+  const detectedUf = normalizeUf(address?.region);
+  if (!detectedUf) {
+    throw new Error('Não consegui identificar seu estado pela localização.');
+  }
+
+  return detectedUf;
+}
+
+export async function getCaptureLocation(selectedUf: Uf): Promise<CaptureLocation> {
+  let resolved: ResolvedLocation;
+  try {
+    resolved = await resolveCurrentLocation();
+  } catch {
+    return { uf: selectedUf };
+  }
+
+  const { address, position } = resolved;
 
   return {
     latitude: position.coords.latitude,
     longitude: position.coords.longitude,
-    uf,
+    uf: selectedUf,
     ...(position.coords.accuracy === null ? {} : { accuracy: position.coords.accuracy }),
     ...(address?.city ? { city: address.city } : {}),
   };
