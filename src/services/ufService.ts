@@ -4,6 +4,36 @@ import type { Uf } from '@/types/domain';
 
 const USER_UF_KEY = 'santinhohunter:userUf';
 
+const ufByStateName: Record<string, Uf> = {
+  ACRE: 'AC',
+  ALAGOAS: 'AL',
+  AMAPA: 'AP',
+  AMAZONAS: 'AM',
+  BAHIA: 'BA',
+  CEARA: 'CE',
+  'DISTRITO FEDERAL': 'DF',
+  'ESPIRITO SANTO': 'ES',
+  GOIAS: 'GO',
+  MARANHAO: 'MA',
+  'MATO GROSSO': 'MT',
+  'MATO GROSSO DO SUL': 'MS',
+  'MINAS GERAIS': 'MG',
+  PARA: 'PA',
+  PARAIBA: 'PB',
+  PARANA: 'PR',
+  PERNAMBUCO: 'PE',
+  PIAUI: 'PI',
+  'RIO DE JANEIRO': 'RJ',
+  'RIO GRANDE DO NORTE': 'RN',
+  'RIO GRANDE DO SUL': 'RS',
+  RONDONIA: 'RO',
+  RORAIMA: 'RR',
+  'SANTA CATARINA': 'SC',
+  'SAO PAULO': 'SP',
+  SERGIPE: 'SE',
+  TOCANTINS: 'TO',
+};
+
 export const ufs: Uf[] = [
   'AC',
   'AL',
@@ -39,8 +69,14 @@ export function normalizeUf(value: string | null | undefined): Uf | null {
     return null;
   }
 
-  const normalized = value.trim().toUpperCase();
-  return ufs.includes(normalized as Uf) ? (normalized as Uf) : null;
+  const normalized = value
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+  return ufs.includes(normalized as Uf)
+    ? (normalized as Uf)
+    : (ufByStateName[normalized] ?? null);
 }
 
 export function getDefaultUf(): Uf {

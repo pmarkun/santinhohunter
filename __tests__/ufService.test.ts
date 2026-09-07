@@ -10,6 +10,8 @@ describe('ufService', () => {
   it('normalizes valid UF values', () => {
     expect(normalizeUf(' sp ')).toBe('SP');
     expect(normalizeUf('rj')).toBe('RJ');
+    expect(normalizeUf('Santa Catarina')).toBe('SC');
+    expect(normalizeUf('São Paulo')).toBe('SP');
   });
 
   it('rejects invalid UF values', () => {

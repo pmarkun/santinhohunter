@@ -9,7 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryActionButton } from '@/components/PrimaryActionButton';
 import { selectCameraPictureSize } from '@/services/cameraService';
 import { setCaptureDraft } from '@/services/captureDraft';
-import { getCaptureLocation, type CaptureLocation } from '@/services/locationService';
+import { getCaptureLocation } from '@/services/locationService';
+import { getStoredUf } from '@/services/ufService';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/layout';
 import { fontFamilies } from '@/theme/typography';
@@ -39,13 +40,14 @@ export default function CameraScreen() {
     try {
       const captureStartedAt = performance.now();
       const capturedAt = new Date().toISOString();
+      const selectedUf = await getStoredUf();
       const [photo, location] = await Promise.all([
         withTimeout(
           cameraRef.current.takePictureAsync({ quality: 0.76 }),
           10000,
           'A câmera demorou demais para responder.',
         ),
-        getCaptureLocation().catch((): CaptureLocation => ({ uf: 'SP' })),
+        getCaptureLocation(selectedUf),
       ]);
 
       if (!photo?.uri) {
