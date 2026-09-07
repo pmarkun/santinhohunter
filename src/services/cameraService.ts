@@ -1,4 +1,11 @@
+import type { CameraPictureOptions } from 'expo-camera';
+
 const TARGET_PICTURE_DIMENSION = 1920;
+
+export const capturePictureOptions = {
+  imageType: 'jpg',
+  quality: 0.76,
+} satisfies CameraPictureOptions;
 
 export function selectCameraPictureSize(
   availableSizes: string[],
