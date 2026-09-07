@@ -7,7 +7,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryActionButton } from '@/components/PrimaryActionButton';
-import { selectCameraPictureSize } from '@/services/cameraService';
+import { capturePictureOptions, selectCameraPictureSize } from '@/services/cameraService';
 import { setCaptureDraft } from '@/services/captureDraft';
 import { getCaptureLocation } from '@/services/locationService';
 import { getStoredUf } from '@/services/ufService';
@@ -43,7 +43,7 @@ export default function CameraScreen() {
       const selectedUf = await getStoredUf();
       const [photo, location] = await Promise.all([
         withTimeout(
-          cameraRef.current.takePictureAsync({ quality: 0.76 }),
+          cameraRef.current.takePictureAsync(capturePictureOptions),
           10000,
           'A câmera demorou demais para responder.',
         ),
